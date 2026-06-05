@@ -230,6 +230,24 @@ var searchIndex = [];
   else { setTimeout(waitForGIS, 50); }
 })();
 
+// ── Session persistence (sign in once, reuse all day) ──────────
+var AUTH_STORAGE_KEY = 'seated_cch_auth';
+function saveAuth(token, expiresInSec, profile) {
+  try {
+    var ttl = (parseInt(expiresInSec, 10) || 3600) - 120; // 2-min safety buffer
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
+      accessToken: token, expiresAt: Date.now() + ttl * 1000, profile: profile
+    }));
+  } catch (e) {}
+}
+function loadStoredAuth() {
+  try { return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || 'null'); }
+  catch (e) { return null; }
+}
+function clearStoredAuth() {
+  try { localStorage.removeItem(AUTH_STORAGE_KEY); } catch (e) {}
+}
+
 function initAuth() {
   google.accounts.id.initialize({
     client_id: OAUTH_CLIENT_ID,
@@ -241,7 +259,6 @@ function initAuth() {
   google.accounts.id.renderButton(document.getElementById('g-signin-btn'), {
     theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular'
   });
-  google.accounts.id.prompt();
 
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: OAUTH_CLIENT_ID,
@@ -249,6 +266,23 @@ function initAuth() {
     hd: REQUIRED_HD,
     callback: function() {}
   });
+
+  // Resume an existing session if a non-expired token is stored from earlier
+  var stored = loadStoredAuth();
+  if (stored && stored.accessToken && stored.expiresAt > Date.now() && stored.profile) {
+    accessToken = stored.accessToken;
+    userProfile = stored.profile;
+    afterAuth().catch(function() {
+      // Stored token was rejected — fall back to interactive sign-in
+      clearStoredAuth(); accessToken = null;
+      google.accounts.id.prompt();
+    });
+    return;
+  }
+
+  // No valid session — auto_select will sign in silently if their Google
+  // session is still alive and they previously granted; otherwise show button.
+  google.accounts.id.prompt();
 }
 
 function onCredentialResponse(resp) {
@@ -268,6 +302,7 @@ function onCredentialResponse(resp) {
       return showAuthError('Could not get Sheets access: ' + (tokenResp.error || 'unknown'));
     }
     accessToken = tokenResp.access_token;
+    saveAuth(accessToken, tokenResp.expires_in, userProfile);
     afterAuth().catch(function(e) { showAuthError('Failed to load prospects: ' + e.message); });
   };
   tokenClient.requestAccessToken({ prompt: '', hint: payload.email });
@@ -297,6 +332,7 @@ function showAuthError(msg) {
 function signOut() {
   if (accessToken) google.accounts.oauth2.revoke(accessToken, function() {});
   google.accounts.id.disableAutoSelect();
+  clearStoredAuth();
   accessToken = null; userProfile = null;
   location.reload();
 }
@@ -304,8 +340,10 @@ function signOut() {
 function refreshAccessToken() {
   return new Promise(function(resolve, reject) {
     tokenClient.callback = function(tokenResp) {
-      if (tokenResp.access_token) resolve(tokenResp.access_token);
-      else reject(new Error('Token refresh failed'));
+      if (tokenResp.access_token) {
+        saveAuth(tokenResp.access_token, tokenResp.expires_in, userProfile);
+        resolve(tokenResp.access_token);
+      } else reject(new Error('Token refresh failed'));
     };
     tokenClient.requestAccessToken({ prompt: '' });
   });
