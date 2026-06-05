@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Seated · Cold Call Hub v2</title>
-<script src="data.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --blue:#185FA5; --blue-lt:#EBF4FF; --blue-mid:#378ADD;
@@ -145,13 +145,40 @@
   .footer-note { grid-column:1/-1; text-align:center; font-size:11px; color:var(--muted); font-style:italic; padding:8px 0 20px; }
   .dropdown::-webkit-scrollbar { width:6px; }
   .dropdown::-webkit-scrollbar-thumb { background:#DDD; border-radius:3px; }
+
+  /* AUTH GATE */
+  #auth-gate { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:1000; }
+  #auth-gate .auth-card { background:var(--white); border:1px solid var(--border); border-radius:12px; padding:32px; max-width:380px; width:calc(100% - 32px); text-align:center; box-shadow:0 8px 24px rgba(0,0,0,0.08); }
+  #auth-gate h1 { font-size:18px; font-weight:600; color:var(--blue); margin-bottom:6px; }
+  #auth-gate p { font-size:13px; color:var(--muted); margin-bottom:20px; line-height:1.5; }
+  #auth-gate .g-btn-wrap { display:flex; justify-content:center; min-height:44px; }
+  #auth-error { display:none; background:#FCEBEB; color:#A32D2D; border-radius:6px; padding:10px 14px; font-size:12px; margin-top:14px; text-align:left; line-height:1.5; }
+  #auth-loading { display:none; font-size:12px; color:var(--muted); margin-top:14px; }
+  .signout-btn { background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:5px; font-size:11px; font-weight:600; padding:4px 10px; cursor:pointer; }
+  .signout-btn:hover { background:rgba(255,255,255,0.25); }
+  body.locked .topbar, body.locked .search-bar, body.locked .main { filter:blur(4px); pointer-events:none; user-select:none; }
 </style>
 </head>
-<body>
+<body class="locked">
+
+<div id="auth-gate">
+  <div class="auth-card">
+    <h1>Seated · Cold Call Hub</h1>
+    <p>Sign in with your <strong>@seatedapp.io</strong> Google account to load the call sheets.</p>
+    <div class="g-btn-wrap"><div id="g-signin-btn"></div></div>
+    <div id="auth-loading">Loading prospects…</div>
+    <div id="auth-error"></div>
+  </div>
+</div>
 
 <div class="topbar">
   <h1>SEATED &nbsp;·&nbsp; Cold Call Hub</h1>
-  <span id="mkt-label"></span>
+  <div style="display:flex; align-items:center; gap:14px;">
+    <span id="mkt-label"></span>
+    <span id="user-email" style="font-size:11px; opacity:0.85;"></span>
+    <button id="export-csv-btn" class="signout-btn" style="display:none;" onclick="exportUrlsCsv()">⬇ Export URLs CSV</button>
+    <button id="signout-btn" class="signout-btn" style="display:none;" onclick="signOut()">Sign out</button>
+  </div>
 </div>
 
 <div class="search-bar">
@@ -172,6 +199,20 @@
 </div>
 
 <script>
+// ── OAuth + sheet config ──────────────────────────────────────
+// OAUTH_CLIENT_ID is not a secret. Reusing the visits app's client — this works
+// as long as the page is served from an origin registered on that client
+// (e.g. https://opassafiume-coder.github.io). Swap if this app lives elsewhere.
+var OAUTH_CLIENT_ID = '352874229289-tglifiln7raionffiran3a63p6verre0.apps.googleusercontent.com';
+var SHEET_ID        = '16XqBrMG5-WD0DsAssMWoK8NZ0t2EFbWAa0bLBJO3DY8';
+var REQUIRED_HD     = 'seatedapp.io';
+var SCOPES          = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+var PROSPECTS_RANGE = 'Prospects!A:P';
+
+var PROSPECTS = [];
+var SCRIPTS = {};
+var tokenClient = null, accessToken = null, userProfile = null;
+
 document.addEventListener('DOMContentLoaded', function() {
 
 var current = null;
@@ -182,11 +223,161 @@ var input = document.getElementById('search-input');
 var dd = document.getElementById('dropdown');
 
 var searchIndex = [];
-for (var i = 0; i < PROSPECTS.length; i++) {
-  searchIndex.push({ i: i, nl: PROSPECTS[i].name.toLowerCase() });
+
+// ── Auth bootstrap ──────────────────────────────────────────────
+(function waitForGIS() {
+  if (window.google && google.accounts && google.accounts.id) { initAuth(); }
+  else { setTimeout(waitForGIS, 50); }
+})();
+
+function initAuth() {
+  google.accounts.id.initialize({
+    client_id: OAUTH_CLIENT_ID,
+    callback: onCredentialResponse,
+    hd: REQUIRED_HD,
+    auto_select: true,
+    use_fedcm_for_prompt: true
+  });
+  google.accounts.id.renderButton(document.getElementById('g-signin-btn'), {
+    theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular'
+  });
+  google.accounts.id.prompt();
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: OAUTH_CLIENT_ID,
+    scope: SCOPES,
+    hd: REQUIRED_HD,
+    callback: function() {}
+  });
 }
 
-// Build a unique, stable slug for each prospect (for deep-link URLs)
+function onCredentialResponse(resp) {
+  var payload;
+  try {
+    payload = JSON.parse(atob(resp.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+  } catch (e) { return showAuthError('Could not decode sign-in token.'); }
+
+  if (payload.hd !== REQUIRED_HD) {
+    google.accounts.id.disableAutoSelect();
+    return showAuthError('This app is restricted to @' + REQUIRED_HD + ' accounts. You signed in as ' + payload.email + '.');
+  }
+  userProfile = { name: payload.name, email: payload.email };
+
+  tokenClient.callback = function(tokenResp) {
+    if (tokenResp.error || !tokenResp.access_token) {
+      return showAuthError('Could not get Sheets access: ' + (tokenResp.error || 'unknown'));
+    }
+    accessToken = tokenResp.access_token;
+    afterAuth().catch(function(e) { showAuthError('Failed to load prospects: ' + e.message); });
+  };
+  tokenClient.requestAccessToken({ prompt: '', hint: payload.email });
+}
+
+function afterAuth() {
+  document.getElementById('g-signin-btn').style.display = 'none';
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('auth-loading').style.display = 'block';
+  return Promise.all([loadProspectsFromSheet(), loadScriptsFromSheet()]).then(function() {
+    document.getElementById('user-email').textContent = userProfile.email;
+    document.getElementById('signout-btn').style.display = 'inline-block';
+    document.getElementById('auth-gate').style.display = 'none';
+    document.body.classList.remove('locked');
+    initApp();
+  });
+}
+
+function showAuthError(msg) {
+  document.getElementById('auth-loading').style.display = 'none';
+  document.getElementById('g-signin-btn').style.display = '';
+  var el = document.getElementById('auth-error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function signOut() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken, function() {});
+  google.accounts.id.disableAutoSelect();
+  accessToken = null; userProfile = null;
+  location.reload();
+}
+
+function refreshAccessToken() {
+  return new Promise(function(resolve, reject) {
+    tokenClient.callback = function(tokenResp) {
+      if (tokenResp.access_token) resolve(tokenResp.access_token);
+      else reject(new Error('Token refresh failed'));
+    };
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+
+function fetchSheetValues(range) {
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID +
+            '/values/' + encodeURIComponent(range) + '?majorDimension=ROWS';
+  function doFetch() {
+    return fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+  }
+  return doFetch().then(function(res) {
+    if (res.status === 401) {
+      return refreshAccessToken().then(function(tok) { accessToken = tok; return doFetch(); });
+    }
+    return res;
+  }).then(function(res) {
+    if (!res.ok) throw new Error('Sheets API ' + res.status);
+    return res.json();
+  }).then(function(data) { return data.values || []; });
+}
+
+function loadProspectsFromSheet() {
+  return fetchSheetValues(PROSPECTS_RANGE).then(function(values) {
+    if (!values.length) { PROSPECTS = []; return; }
+    var headers = values[0].map(function(h) { return String(h || '').trim(); });
+    var out = [];
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i] || [];
+      var obj = {};
+      for (var c = 0; c < headers.length; c++) obj[headers[c]] = row[c] != null ? String(row[c]) : '';
+      if (!obj.name) continue;
+      out.push({
+        name: obj.name, address: obj.address, neighborhood: obj.neighborhood, zip: obj.zip,
+        cuisine: obj.cuisine, price: obj.price, accolades: obj.accolades, market: obj.market,
+        bilt_safe: obj.bilt_safe, mkt_year: obj.mkt_year, mkt_avg_rev: obj.mkt_avg_rev,
+        mkt_members: obj.mkt_members, mkt_volume: obj.mkt_volume,
+        partners: parseJsonCell(obj.partners_json),
+        bilt: parseJsonCell(obj.bilt_json),
+        dinova: parseJsonCell(obj.dinova_json)
+      });
+    }
+    PROSPECTS = out;
+  });
+}
+
+function parseJsonCell(s) {
+  if (!s) return [];
+  try { var v = JSON.parse(s); return Array.isArray(v) ? v : []; }
+  catch (e) { return []; }
+}
+
+function loadScriptsFromSheet() {
+  return fetchSheetValues('Scripts!A2:B').then(function(rows) {
+    SCRIPTS = {};
+    for (var i = 0; i < rows.length; i++) {
+      var k = rows[i][0];
+      if (k) SCRIPTS[String(k).trim()] = rows[i][1] != null ? String(rows[i][1]) : '';
+    }
+  });
+}
+
+// Fill {token} placeholders in a script template with values.
+function tpl(key, vars) {
+  var s = SCRIPTS[key] || '';
+  if (vars) for (var k in vars) {
+    if (vars.hasOwnProperty(k)) s = s.split('{' + k + '}').join(vars[k] == null ? '' : vars[k]);
+  }
+  return s;
+}
+
+// --- Unique slug per prospect (for deep-link URLs) ---
 function slugify(s) {
   return String(s || '').toLowerCase()
     .replace(/&/g, ' and ')
@@ -195,19 +386,59 @@ function slugify(s) {
 }
 var slugToIdx = {};
 var idxToSlug = [];
-var slugCounts = {};
-for (var i = 0; i < PROSPECTS.length; i++) {
-  var base = slugify(PROSPECTS[i].name) || ('restaurant-' + i);
-  var slug = base;
-  if (slugCounts[base] === undefined) {
-    slugCounts[base] = 1;
-  } else {
-    slugCounts[base] += 1;
-    slug = base + '-' + slugCounts[base];
+function buildSlugs() {
+  slugToIdx = {}; idxToSlug = [];
+  var counts = {};
+  for (var i = 0; i < PROSPECTS.length; i++) {
+    var base = slugify(PROSPECTS[i].name) || ('restaurant-' + i);
+    var slug = base;
+    if (counts[base] === undefined) { counts[base] = 1; }
+    else { counts[base] += 1; slug = base + '-' + counts[base]; }
+    slugToIdx[slug] = i;
+    idxToSlug[i] = slug;
   }
-  slugToIdx[slug] = i;
-  idxToSlug[i] = slug;
 }
+
+function initApp() {
+  searchIndex.length = 0;
+  for (var i = 0; i < PROSPECTS.length; i++) {
+    searchIndex.push({ i: i, nl: PROSPECTS[i].name.toLowerCase() });
+  }
+  buildSlugs();
+  document.getElementById('export-csv-btn').style.display = 'inline-block';
+  // Deep link: if URL has ?r=<slug>, auto-load that restaurant
+  var match = window.location.search.match(/[?&]r=([^&]+)/);
+  if (match) {
+    var slug = decodeURIComponent(match[1]);
+    if (slugToIdx[slug] !== undefined) selectProspect(slugToIdx[slug]);
+  }
+}
+
+// --- Export a CSV of every restaurant + its unique URL (built from live data) ---
+function exportUrlsCsv() {
+  var baseUrl = window.location.origin + window.location.pathname;
+  function csvCell(v) {
+    v = String(v == null ? '' : v);
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  var cols = ['name','market','neighborhood','cuisine','price','address','zip','url'];
+  var lines = [cols.join(',')];
+  for (var i = 0; i < PROSPECTS.length; i++) {
+    var p = PROSPECTS[i];
+    var url = baseUrl + '?r=' + idxToSlug[i];
+    lines.push([p.name, p.market, p.neighborhood, p.cuisine, p.price, p.address, p.zip, url]
+      .map(csvCell).join(','));
+  }
+  var blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'restaurant_urls.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+window.signOut = signOut;
+window.exportUrlsCsv = exportUrlsCsv;
 
 function showDropdown(q) {
   var results = [];
@@ -357,38 +588,37 @@ function render() {
   var d1n = d1.name || '', d2n = d2.name || '', d3n = d3.name || '';
 
   var nbhd = p.neighborhood || 'your neighborhood';
-  var accolPhrase = p.accolades
-    ? 'you\'re featured in ' + p.accolades
-    : 'your Google reviews stood out';
+  var accolPhrase = p.accolades ? tpl('accol_featured', { accolades: p.accolades }) : (SCRIPTS.accol_default || '');
   var biltSafe = p.bilt_safe || '';
 
   var biltNames = [b1.name, b2.name, b3.name].filter(Boolean);
-  var biltPhrase = biltNames.length === 0 ? 'the luxury buildings nearby'
-    : biltNames.length === 1 ? biltNames[0] + ' buildings nearby'
-    : biltNames.length === 2 ? biltNames[0] + ' and ' + biltNames[1] + ' buildings nearby'
-    : biltNames[0] + ', ' + biltNames[1] + ', and ' + biltNames[2] + ' buildings nearby';
-
   var dinovaNames = [d1n, d2n, d3n].filter(Boolean);
-  var dinPhrase = dinovaNames.length === 0 ? 'our corporate dining partners'
+  var dinPhrase = dinovaNames.length === 0 ? (SCRIPTS.din_phrase_none || '')
     : dinovaNames.length === 1 ? dinovaNames[0]
     : dinovaNames.length === 2 ? dinovaNames[0] + ' and ' + dinovaNames[1]
     : dinovaNames[0] + ', ' + dinovaNames[1] + ', and ' + dinovaNames[2];
 
   var scriptNotice = '<div class="script-notice">⚑ RED TEXT = DIRECTIONS — DO NOT READ ALOUD</div>';
 
-  // Shared script blocks
+  // Shared script blocks (templates loaded from the sheet's Scripts tab)
   var isNYC = (p.market || '').toLowerCase().indexOf('new york') >= 0;
-  var quantify = "We're Seated — a restaurant discovery program partnered with the largest credit card rewards platforms in the country. We power dining for millions of members nationally, work with about " + (isNYC ? "3K restaurants — we're actually based in NYC" : "3,000 restaurants") + ", and we've been doing this for 10 years.";
-  var localize  = "In " + nbhd + ", we work with " + (p1n || 'a similar restaurant') + " and " + (p2n || 'another local partner') + " — and we're actively expanding here right now. The reason restaurants like " + p1n + " partner with us is that we're exceptionally good at consistently filling tables — covers they couldn't fill on their own.";
-  var personalize = "I came across " + p.name + " — " + accolPhrase + ". " + biltSafe + " And we're connected to " + dinPhrase + " through our corporate dining program. You'd be a really strong fit for our diner base.";
-  var sharedClose = "I actually have some time tomorrow at 3 PM — does that work for you?\n\nIf they ask about pricing: 'That's exactly what I want to walk you through — it's easier to show than explain. No set-up costs, not a subscription. Does [time] work?'";
-  var rl_lock = "Perfect — I'll send a calendar invite right now. What's the best email?\n\n'Just sent it — if anything comes up, shoot me a text. My number's in the invite.'\n\n'Oh — real quick, what POS system do you use? Just want to confirm compatibility.'";
-  var dm_lock = "Perfect — I'll send a calendar invite right now. What's the best email?\n\n'Just sent it.'\n\n'Oh — and listen, I don't want to have to tie you up on your business line next time I follow up. What's the best cell to reach you on?'\n\n[They give it] → 'Perfect — I'll text you a reminder before we hop on.'\n\n[They don't give it out] → 'Totally hear you, not going to spam you — I just know you're always running around and it's easier to text than play phone tag. Also I can send you a link to what we'd be looking at on the call so you can preview it beforehand.'\n\n'Oh — real quick, what POS system do you use?'";
+  var rest_clause = isNYC ? (SCRIPTS.quantify_rest_nyc || '') : (SCRIPTS.quantify_rest_default || '');
+  var quantify = tpl('quantify', { rest_clause: rest_clause });
+  var localize = tpl('localize', {
+    nbhd: nbhd,
+    p1or: p1n || (SCRIPTS.partner_fallback_1 || ''),
+    p2or: p2n || (SCRIPTS.partner_fallback_2 || ''),
+    p1n: p1n
+  });
+  var personalize = tpl('personalize', { name: p.name, accolPhrase: accolPhrase, biltSafe: biltSafe, dinPhrase: dinPhrase });
+  var sharedClose = SCRIPTS.shared_close || '';
+  var rl_lock = SCRIPTS.rl_lock || '';
+  var dm_lock = SCRIPTS.dm_lock || '';
 
   // RESTAURANT LINE
-  var rl_opener = "Hi — I'm calling to extend an invitation to join the Seated network. Could you point me to whoever handles partnerships for " + p.name + "?";
-  var rl_gatekeeper = "<span class=\"dir\">[They say they don't do partnerships / 'we don't do that']</span>\n\n'Got it — this isn't a traditional advertising pitch, there's no upfront cost and it's not a subscription. I just want to make sure I'm talking to the right person — who would handle something like adding a new revenue channel or a new customer program? Is that the owner?'\n\n<span class=\"dir\">[Can't transfer / owner unavailable — get their name, a direct number, and best callback time. Only schedule with someone who can approve.]</span>\n\n'What's their name? And is there a better number to reach them directly — a cell or direct line?'";
-  var rl_qualify = "<span class=\"dir\">[Once you have the DM]</span>\n'Great — and just so I make sure I'm talking to the right person, what's your role at " + p.name + "?'\n\n<span class=\"dir\">[Owner / final DM] → Skip to Quantify.</span>\n<span class=\"dir\">[GM / Manager]</span>\n'Got it — for something like adding a new partnership, is that something you can approve, or would the owner need to be looped in?'\n<span class=\"dir\">[Can approve] → Proceed to Quantify.</span>\n<span class=\"dir\">[Needs owner]</span>\n'I don't want to make you explain this twice — is the owner available now, or what's the best way to get them on with us?'";
+  var rl_opener = tpl('rl_opener', { name: p.name });
+  var rl_gatekeeper = SCRIPTS.rl_gatekeeper || '';
+  var rl_qualify = tpl('rl_qualify', { name: p.name });
 
   var rlContent = scriptNotice
     + scriptRow('OPENER', rl_opener, 'opener-line')
@@ -401,8 +631,9 @@ function render() {
     + scriptRow('LOCK', rl_lock);
 
   // DM CELL
-  var dm_opener = "Hey [Owner Name] — it's [Your Name] over at Seated. I'm not going to keep you long — I wanted to connect about " + p.name + " specifically because " + accolPhrase + ". Are you familiar with Seated?";
-  var dm_quantify = "<span class=\"dir\">[Not Familiar]</span>\n" + quantify + "\n\n<span class=\"dir\">[Familiar]</span>\nGot it — so you probably know that we're a restaurant discovery program. We're partnered with the largest credit card rewards platforms in the country, we power dining for millions of members nationally, work with about 3,000 restaurants, and we've been doing this for 10 years.";
+  var dm_opener = tpl('dm_opener', { name: p.name, accolPhrase: accolPhrase });
+  var dm_quantify = '<span class="dir">[Not Familiar]</span>\n' + quantify
+    + '\n\n<span class="dir">[Familiar]</span>\n' + (SCRIPTS.dm_quantify_familiar || '');
 
   var dmContent = scriptNotice
     + scriptRow('OPENER', dm_opener, 'opener-cell')
@@ -414,23 +645,23 @@ function render() {
 
   // DISCOVERY
   var discContent = ''
-    + discRow('<b>What does a typical week look like for you in terms of covers — are there nights you\'re looking to drive more traffic?</b>', 'Listen for patterns in the book. Understand where the gaps are so you can frame the pitch around real need.')
-    + discRow("<b>Are you doing anything right now to drive covers — OpenTable promotions, social, anything like that?</b>", "Listen for: gaps in their strategy. If nothing, that's your opening. If a competitor, that's a comparison opportunity.")
-    + discRow("<b>Who's your typical guest — neighborhood regulars, destination diners, corporate accounts?</b>", 'Listen for: alignment with BILT residents (young professional, nearby) or Dinova (corporate expense account). Use in your close.')
-    + discRow("<b>Just so I make sure I'm talking to the right person — what does the process look like for adding a new partnership? Is that something you can approve, or would the owner need to be looped in?</b>", 'Only ask if unsure you have the DM. Get to the owner if needed.')
-    + discRow('<b>What POS system do you use? Just want to confirm compatibility before we hop on.</b>', 'Ask when locking the meeting. Confirms intent and surfaces any ops objection early.')
-    + '<div class="disc-closing">CLOSING — Confirm it\'s a priority before you hang up</div>'
-    + '<div class="disc-closing-body">\'Based on everything you\'ve shared — this sounds like a strong fit. I want to make sure I\'m not wasting your time: is bringing in more guests something you\'re actively focused on right now?\'\n\n<span class="dir">[Yes / it\'s a priority] → Move straight to closing the meeting.</span>\n<span class="dir">[Back-burner / not right now] → \'Got it — when does that change? I\'ll follow up then. What\'s the best way to reach you?\'</span></div>';
+    + discRow('<b>' + (SCRIPTS.disc1_q || '') + '</b>', SCRIPTS.disc1_a || '')
+    + discRow('<b>' + (SCRIPTS.disc2_q || '') + '</b>', SCRIPTS.disc2_a || '')
+    + discRow('<b>' + (SCRIPTS.disc3_q || '') + '</b>', SCRIPTS.disc3_a || '')
+    + discRow('<b>' + (SCRIPTS.disc4_q || '') + '</b>', SCRIPTS.disc4_a || '')
+    + discRow('<b>' + (SCRIPTS.disc5_q || '') + '</b>', SCRIPTS.disc5_a || '')
+    + '<div class="disc-closing">' + (SCRIPTS.disc_closing_title || '') + '</div>'
+    + '<div class="disc-closing-body">' + (SCRIPTS.disc_closing_body || '') + '</div>';
 
   // OBJECTIONS
   var objContent = ''
-    + objRow('"What\'s Seated?"', '<b>Say:</b> "We\'re a restaurant discovery program — partnered with the biggest credit card rewards platforms in the country, think Bilt, Bank of America, and similar. We connect their members — millions of high-intent diners — directly to restaurants like yours. No upfront cost, no subscription. We only make money when we drive you revenue. That\'s the 30-second version — it\'s honestly easier to show than explain. That\'s why I want to grab 20 minutes."')
-    + objRow('"Send me an email"', '<b>Say:</b> "Totally — before I do, I just want to make sure this is a good fit. Are you focused on getting more people through the door during the week?<br><br>[Once they engage] → I actually have a slot open tomorrow at 2 PM. Does that work? I\'ll keep it to 20 minutes."')
-    + objRow('"Not interested"', '<b>Say:</b> "\'Not interested?\' [mirror — pause]<br><br>\'When you say that, is it a cost thing, or just don\'t want another platform?\'<br><br>[If cost] → No upfront fees, nothing like that.<br>[If ops] → Zero extra work for your staff — ' + (p1n || 'our partner restaurants') + ' run it with no operational changes."')
-    + objRow('"What does it cost?"', '<b>Say:</b> "The price is entirely up to you — depends on how much you want to lean into filling empty seats. Makes a lot more sense when I can show you. Does [time] work?<br><br><b>Do NOT quote percentages. Do NOT explain occupancy pricing. Get the meeting.</b>"')
-    + objRow('"We\'ve used Seated before"', '<b>Say:</b> "Yeah, I actually see that — we\'ve made some big changes since then. We added luxury building and corporate partnerships and significantly increased our volume. Are you open to hearing what\'s different? I have time tomorrow — does that work?"')
-    + objRow('"We\'re too busy"', '<b>Say:</b> "That\'s a great problem to have — and when things slow down, you\'ll want something already in place. We work around your schedule. What does your calendar look like in the next couple weeks?"')
-    + objRow('"What is BILT?"', '<b>Say:</b> "It\'s a credit card rewards program built into leases at premium apartment buildings nearby — residents earn points paying rent and redeem them at restaurants close to where they live. ' + biltSafe + ' Worth 20 minutes?"');
+    + objRow('"' + (SCRIPTS.obj1_q || '') + '"', SCRIPTS.obj1_a || '')
+    + objRow('"' + (SCRIPTS.obj2_q || '') + '"', SCRIPTS.obj2_a || '')
+    + objRow('"' + (SCRIPTS.obj3_q || '') + '"', tpl('obj3_a', { p1or2: p1n || (SCRIPTS.partner_fallback_objection || '') }))
+    + objRow('"' + (SCRIPTS.obj4_q || '') + '"', SCRIPTS.obj4_a || '')
+    + objRow('"' + (SCRIPTS.obj5_q || '') + '"', SCRIPTS.obj5_a || '')
+    + objRow('"' + (SCRIPTS.obj6_q || '') + '"', SCRIPTS.obj6_a || '')
+    + objRow('"' + (SCRIPTS.obj7_q || '') + '"', tpl('obj7_a', { biltSafe: biltSafe }));
 
   // BUILD LEFT COLUMN
   var ndCount = [p.partners.filter(function(x){return x&&x.name;}).length,
@@ -495,7 +726,7 @@ function render() {
   document.getElementById('main').innerHTML = ''
     + '<div>' + leftCol + '</div>'
     + '<div>' + rightCol + '</div>'
-    + '<div class="footer-note">⚑ Goal of every call: schedule the meeting — not explain pricing, not explain the network. Earn 20 minutes on a calendar.</div>';
+    + '<div class="footer-note">' + (SCRIPTS.footer_note || '') + '</div>';
 
   document.getElementById('search-hint').textContent = 'Showing: ' + p.name + (p.market ? ' · ' + p.market : '');
 }
@@ -530,15 +761,6 @@ function setPanelTab(tab) {
 window.selectProspect = selectProspect;
 window.setNDTab = setNDTab;
 window.setPanelTab = setPanelTab;
-
-// Deep link: if URL has ?r=<slug>, auto-load that restaurant
-(function loadFromURL() {
-  var match = window.location.search.match(/[?&]r=([^&]+)/);
-  if (match) {
-    var slug = decodeURIComponent(match[1]);
-    if (slugToIdx[slug] !== undefined) selectProspect(slugToIdx[slug]);
-  }
-})();
 
 }); // end DOMContentLoaded
 </script>
