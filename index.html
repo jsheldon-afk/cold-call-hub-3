@@ -626,37 +626,53 @@ function render() {
   var d1n = d1.name || '', d2n = d2.name || '', d3n = d3.name || '';
 
   var nbhd = p.neighborhood || 'your neighborhood';
-  var accolPhrase = p.accolades ? tpl('accol_featured', { accolades: p.accolades }) : (SCRIPTS.accol_default || '');
+  var accolPhrase = p.accolades ? ("you’re featured in " + p.accolades) : "your Google reviews stood out";
   var biltSafe = p.bilt_safe || '';
 
   var biltNames = [b1.name, b2.name, b3.name].filter(Boolean);
   var dinovaNames = [d1n, d2n, d3n].filter(Boolean);
-  var dinPhrase = dinovaNames.length === 0 ? (SCRIPTS.din_phrase_none || '')
+  var dinPhrase = dinovaNames.length === 0 ? "our corporate dining partners"
     : dinovaNames.length === 1 ? dinovaNames[0]
     : dinovaNames.length === 2 ? dinovaNames[0] + ' and ' + dinovaNames[1]
     : dinovaNames[0] + ', ' + dinovaNames[1] + ', and ' + dinovaNames[2];
 
   var scriptNotice = '<div class="script-notice">⚑ RED TEXT = DIRECTIONS — DO NOT READ ALOUD</div>';
 
-  // Shared script blocks (templates loaded from the sheet's Scripts tab)
+  // Wording synced from the master Google Doc. Dynamic values still come from the prospect.
   var isNYC = (p.market || '').toLowerCase().indexOf('new york') >= 0;
-  var rest_clause = isNYC ? (SCRIPTS.quantify_rest_nyc || '') : (SCRIPTS.quantify_rest_default || '');
-  var quantify = tpl('quantify', { rest_clause: rest_clause });
-  var localize = tpl('localize', {
-    nbhd: nbhd,
-    p1or: p1n || (SCRIPTS.partner_fallback_1 || ''),
-    p2or: p2n || (SCRIPTS.partner_fallback_2 || ''),
-    p1n: p1n
-  });
-  var personalize = tpl('personalize', { name: p.name, accolPhrase: accolPhrase, biltSafe: biltSafe, dinPhrase: dinPhrase });
-  var sharedClose = SCRIPTS.shared_close || '';
-  var rl_lock = SCRIPTS.rl_lock || '';
-  var dm_lock = SCRIPTS.dm_lock || '';
+  var restCount = isNYC ? "3K restaurants — we’re actually based in NYC" : "3,000 restaurants";
+  var fb1 = p1n || "a similar local spot";
+  var fb2 = p2n || "another local partner";
+  var dinOne = d1n || dinPhrase || "major corporate accounts";
+  function DIR(t) { return '<span class="dir">' + t + '</span>'; }
+
+  var quantify = "We’re Seated — a restaurant discovery program partnered with the largest credit card rewards platforms in the country. We power dining for millions of members nationally, work with about " + restCount + ", and we’ve been doing this for 10 years.";
+  var localize = "In " + nbhd + ", we work with " + fb1 + " and " + fb2 + " — and we’re actively expanding here right now. The reason restaurants like " + fb1 + " partner with us is that we’re exceptionally good at filling empty tables — covers they couldn’t fill on their own.";
+  var personalize = "I came across " + p.name + " — " + accolPhrase + ". " + biltSafe + " And we’re connected to " + dinPhrase + " through our corporate dining program. You’d be a really strong fit for our diner base.";
 
   // RESTAURANT LINE
-  var rl_opener = tpl('rl_opener', { name: p.name });
-  var rl_gatekeeper = SCRIPTS.rl_gatekeeper || '';
-  var rl_qualify = tpl('rl_qualify', { name: p.name });
+  var rl_opener = "Hi — I’m calling to invite " + p.name + " to join the Seated network. Could you point me to whoever handles partnerships for " + p.name + "?";
+  var rl_gatekeeper = DIR("[Can’t transfer / owner unavailable — get their name, a direct number, and best callback time. Only schedule with someone who can approve.]")
+    + "\n\n“What’s their name? And is there a better number to reach them directly — a cell or direct line?”"
+    + "\n\n" + DIR("[They won’t / can’t give you a name, number, or a better time]")
+    + "\n“I hear you — the reason I’m asking is we have guests we’re looking to send to " + p.name + " as soon as possible, so I need to get in touch with someone this week to see if this would be a good fit. Is whoever handles this kind of thing going to be in later today or tomorrow?”"
+    + "\n" + DIR("[Push a little here to figure out the best time for a call-back]")
+    + "\n\n" + DIR("[They say they don’t do partnerships / “we don’t do that”]")
+    + "\n“Got it — this isn’t a traditional advertising pitch, there’s no upfront cost and it’s not a subscription. I just want to make sure I’m talking to the right person — who would handle something like adding a new revenue channel or a new customer program? Is that the owner?”";
+  var rl_qualify = DIR("[Once you have the DM]")
+    + "\n“Great — and just so I make sure I’m talking to the right person, what’s your role at " + p.name + "?”"
+    + "\n\n" + DIR("[Owner / final DM] → Skip to Quantify.")
+    + "\n" + DIR("[GM / Manager]")
+    + "\n“Got it — for something like adding a new partnership, is that something you can approve, or would the owner need to be looped in?”"
+    + "\n" + DIR("[Can approve] → Proceed to Quantify.")
+    + "\n" + DIR("[Needs owner]")
+    + "\n“I don’t want to make you explain this twice — is the owner available now, or what’s the best way to get them on with us?”";
+  var rl_close = "I actually have some time tomorrow at 3 PM — does that work for you?"
+    + "\n\n" + DIR("[If they ask about pricing]")
+    + "\n“That’s exactly what I want to walk you through — it’s easier to show than explain. No set-up costs, not a subscription. Does [time] work?”";
+  var rl_lock = "Perfect — I’ll send a calendar invite right now. What’s the best email?"
+    + "\n\n“Just sent it — if anything comes up, shoot me a text. My number’s in the invite.”"
+    + "\n\n“Oh — real quick, what POS system do you use? Just want to confirm compatibility.”";
 
   var rlContent = scriptNotice
     + scriptRow('OPENER', rl_opener, 'opener-line')
@@ -665,41 +681,63 @@ function render() {
     + scriptRow('QUANTIFY', quantify)
     + scriptRow('LOCALIZE', localize, '', [p1n, p2n])
     + scriptRow('PERSONALIZE', personalize, '', [], biltNames, dinovaNames)
-    + scriptRow('CLOSE', sharedClose)
+    + scriptRow('CLOSE', rl_close)
     + scriptRow('LOCK', rl_lock);
 
   // DM CELL
-  var dm_opener = tpl('dm_opener', { name: p.name, accolPhrase: accolPhrase });
-  var dm_quantify = '<span class="dir">[Not Familiar]</span>\n' + quantify
-    + '\n\n<span class="dir">[Familiar]</span>\n' + (SCRIPTS.dm_quantify_familiar || '');
+  var dm_opener = "Hey [Owner Name] — it’s [Your Name] over at Seated. I’m calling because I manage all the diners for Bank of America and we’re launching a new batch of restaurants this summer — I don’t think you’re working with them, right?"
+    + "\n\n" + DIR("[No? What? What’s this about?]")
+    + "\n“My job is to match high-net-worth diners — like from Bank of America, " + dinOne + " and luxury renters — with great restaurants around the city.”"
+    + "\n\n“For context, my company is partnered with the largest credit card rewards platforms in the country, we power dining for millions of members nationally, work with about " + restCount + ", and we’ve been doing this for 10 years.”"
+    + "\n\n" + DIR("[Not interested]")
+    + "\n“Not interested? I’ll level with you — I’m sure this is the 30th call this week you’ve gotten, but this isn’t a traditional marketing pitch. My job is to match high-net-worth diners — like from Bank of America, " + dinOne + " and luxury renters — with great restaurants around the city.”"
+    + "\n“In " + nbhd + ", we work with " + fb1 + " and " + fb2 + " — and we’re actively expanding here right now. The reason restaurants like " + fb1 + " partner with us is that we’re exceptionally good at filling tables that sit empty with diners they wouldn’t easily have access to.”"
+    + "\n“What are you doing right now to target corporate diners or guests that might not have heard of you before?”"
+    + "\n\n" + DIR("[Send me an email / call me back later]")
+    + "\n“Cool, I can totally do that. Before I write something up for you, can I ask you a question to see if this is a fit for " + p.name + "?”"
+    + "\n“For context, my company focuses on matching corporate diners — like Bank of America, " + dinOne + " and luxury renters — with restaurants like " + fb1 + " and " + fb2 + ".”"
+    + "\n“What are you doing right now to target corporate diners or guests that might not have heard of you before?”";
+  var dm_quantify = "For context, my company is partnered with the largest credit card rewards platforms in the country, we power dining for millions of members nationally, work with about " + restCount + ", and we’ve been doing this for 10 years.";
+  var dm_close = "Are you currently working with Bank of America or any corporate dining programs?"
+    + "\n\n" + DIR("[No]")
+    + "\n“Got it — so if you could handle a few more guests each week, we’re doing a round of new restaurant additions and we can set up a time. I actually have some time tomorrow at 3 PM — does that work for you?”"
+    + "\n\n" + DIR("[If they ask about pricing]")
+    + "\n“That’s exactly what I want to walk you through — it’s easier to show than explain. No set-up costs, not a subscription. Does [time] work?”";
+  var dm_lock = "Perfect — I’ll send a calendar invite right now. What’s the best email?"
+    + "\n\n“Just sent it.”"
+    + "\n\n“Oh — and listen, I don’t want to tie you up on your business line next time I follow up. What’s the best cell to reach you on?”"
+    + "\n\n" + DIR("[They give it]") + "\n“Perfect — I’ll text you a reminder before we hop on.”"
+    + "\n\n" + DIR("[They don’t give it out]") + "\n“Totally hear you, not going to spam you — I just know you’re always running around and it’s easier to text than play phone tag. Also I can send you a link to what we’d be looking at on the call so you can preview it beforehand.”"
+    + "\n\n“Oh — real quick, what POS system do you use?”";
 
   var dmContent = scriptNotice
-    + scriptRow('OPENER', dm_opener, 'opener-cell')
+    + scriptRow('OPENER', dm_opener, 'opener-cell', [p1n, p2n], [], dinovaNames)
     + scriptRow('QUANTIFY', dm_quantify)
     + scriptRow('LOCALIZE', localize, '', [p1n, p2n])
     + scriptRow('PERSONALIZE', personalize, '', [], biltNames, dinovaNames)
-    + scriptRow('CLOSE', sharedClose)
+    + scriptRow('CLOSE', dm_close)
     + scriptRow('LOCK', dm_lock);
 
   // DISCOVERY
   var discContent = ''
-    + discRow('<b>' + (SCRIPTS.disc1_q || '') + '</b>', SCRIPTS.disc1_a || '')
-    + discRow('<b>' + (SCRIPTS.disc2_q || '') + '</b>', SCRIPTS.disc2_a || '')
-    + discRow('<b>' + (SCRIPTS.disc3_q || '') + '</b>', SCRIPTS.disc3_a || '')
-    + discRow('<b>' + (SCRIPTS.disc4_q || '') + '</b>', SCRIPTS.disc4_a || '')
-    + discRow('<b>' + (SCRIPTS.disc5_q || '') + '</b>', SCRIPTS.disc5_a || '')
-    + '<div class="disc-closing">' + (SCRIPTS.disc_closing_title || '') + '</div>'
-    + '<div class="disc-closing-body">' + (SCRIPTS.disc_closing_body || '') + '</div>';
+    + discRow("<b>What are you doing right now to target corporate diners or guests that might not have heard of you before?</b>", "Listen for gaps in their strategy. If nothing, that’s your opening. If a competitor, that’s a comparison opportunity.")
+    + discRow("<b>What does a typical week look like for you in terms of covers — are there nights you’re looking to drive more traffic?</b>", "Listen for patterns in the book. Understand where the gaps are so you can frame the pitch around real need.")
+    + discRow("<b>Are you doing anything right now to drive covers — OpenTable promotions, social, anything like that?</b>", "Listen for gaps in their strategy. If nothing, that’s your opening. If a competitor, that’s a comparison opportunity.")
+    + discRow("<b>Who’s your typical guest — neighborhood regulars, destination diners, corporate accounts?</b>", "Listen for alignment with BILT residents (young professional, nearby) or Dinova (corporate expense account). Use in your close.")
+    + discRow("<b>Just so I make sure I’m talking to the right person — what does the process look like for adding a new partnership? Is that something you can approve, or would the owner need to be looped in?</b>", "Only ask if unsure you have the DM. Get to the owner if needed.")
+    + discRow("<b>What POS system do you use? Just want to confirm compatibility before we hop on.</b>", "Ask when locking the meeting. Confirms intent and surfaces any ops objection early.")
+    + '<div class="disc-closing">CLOSING — Confirm it’s a priority before you hang up</div>'
+    + '<div class="disc-closing-body">“Based on everything you’ve shared — this sounds like a strong fit. I want to make sure I’m not wasting your time: is bringing in more guests something you’re actively focused on right now?”\n\n' + DIR("[Yes / it’s a priority] → Move straight to closing the meeting.") + '\n' + DIR("[Back-burner / not right now] → “Got it — when does that change? I’ll follow up then. What’s the best way to reach you?”") + '</div>';
 
   // OBJECTIONS
   var objContent = ''
-    + objRow('"' + (SCRIPTS.obj1_q || '') + '"', SCRIPTS.obj1_a || '')
-    + objRow('"' + (SCRIPTS.obj2_q || '') + '"', SCRIPTS.obj2_a || '')
-    + objRow('"' + (SCRIPTS.obj3_q || '') + '"', tpl('obj3_a', { p1or2: p1n || (SCRIPTS.partner_fallback_objection || '') }))
-    + objRow('"' + (SCRIPTS.obj4_q || '') + '"', SCRIPTS.obj4_a || '')
-    + objRow('"' + (SCRIPTS.obj5_q || '') + '"', SCRIPTS.obj5_a || '')
-    + objRow('"' + (SCRIPTS.obj6_q || '') + '"', SCRIPTS.obj6_a || '')
-    + objRow('"' + (SCRIPTS.obj7_q || '') + '"', tpl('obj7_a', { biltSafe: biltSafe }));
+    + objRow("“What’s Seated?”", "<b>Say:</b> “We’re a restaurant discovery program — partnered with the biggest credit card rewards platforms in the country, think Bilt, Bank of America, and similar. We connect their members — millions of high-intent diners — directly to restaurants like yours. No upfront cost, no subscription. We only make money when we drive you revenue. That’s the 30-second version — it’s honestly easier to show than explain. That’s why I want to grab 20 minutes.”")
+    + objRow("“Send me an email”", "<b>Say:</b> “Totally — before I do, I just want to make sure this is a good fit. Are you focused on getting more people through the door during the week?”<br><br>" + DIR("[Once they engage] → “I actually have a slot open tomorrow at 2 PM. Does that work? I’ll keep it to 20 minutes.”"))
+    + objRow("“Not interested”", DIR("[Mirror — pause]") + "<br><b>Say:</b> “‘Not interested?’ … When you say that, is it a cost thing, or just don’t want another platform?”<br><br>" + DIR("[If cost] → “No upfront fees, nothing like that.”") + "<br>" + DIR("[If ops] → “Zero extra work for your staff — " + (p1n || "our partner restaurants") + " run it with no operational changes.”"))
+    + objRow("“What does it cost?”", "<b>Say:</b> “The price is entirely up to you — depends on how much you want to lean into filling empty seats. Makes a lot more sense when I can show you. Does [time] work?”<br><br>" + DIR("Do NOT quote percentages. Do NOT explain occupancy pricing. Get the meeting."))
+    + objRow("“We’ve used Seated before”", "<b>Say:</b> “Yeah, I actually see that — we’ve made some big changes since then. We added luxury building and corporate partnerships and significantly increased our volume. Are you open to hearing what’s different? I have time tomorrow — does that work?”")
+    + objRow("“We’re too busy”", "<b>Say:</b> “That’s a great problem to have — and when things slow down, you’ll want something already in place. We work around your schedule. What does your calendar look like in the next couple weeks?”")
+    + objRow("“What is BILT?”", "<b>Say:</b> “It’s a credit card rewards program built into leases at premium apartment buildings nearby — residents earn points paying rent and redeem them at restaurants close to where they live. " + biltSafe + " Worth 20 minutes?”");
 
   // BUILD LEFT COLUMN
   var ndCount = [p.partners.filter(function(x){return x&&x.name;}).length,
@@ -764,7 +802,7 @@ function render() {
   document.getElementById('main').innerHTML = ''
     + '<div>' + leftCol + '</div>'
     + '<div>' + rightCol + '</div>'
-    + '<div class="footer-note">' + (SCRIPTS.footer_note || '') + '</div>';
+    + '<div class="footer-note">⚑ Goal of every call: schedule the meeting — earn 20 minutes on a calendar.</div>';
 
   document.getElementById('search-hint').textContent = 'Showing: ' + p.name + (p.market ? ' · ' + p.market : '');
 }
