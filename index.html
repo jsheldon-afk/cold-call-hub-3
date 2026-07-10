@@ -115,6 +115,7 @@
   .panel-tab[data-group="obj"].active { background:var(--orange-lt); color:var(--orange); border-color:var(--orange); }
   .chip-nbhd { background:#ECEFF3; color:#4A5568; }
   .mkt-compact { padding:8px 14px; font-size:11px; color:var(--muted); line-height:1.5; }
+  .ph { background:#FFF3B0; color:#5C4D00; padding:0 3px; border-radius:3px; font-weight:600; }
 
   /* SCRIPT */
   .script-section { border-bottom:0.5px solid var(--border); }
@@ -698,6 +699,12 @@ function render() {
     + "\n\n“Oh — real quick, what POS system do you use?”";
 
   // OPENER TAB — cell opener first, restaurant opener second, then the shared talk track
+  var _ph = function(s){ return String(s)
+    .split('[Owner Name]').join('<span class="ph">[Owner Name]</span>')
+    .split('[Your Name]').join('<span class="ph">[Your Name]</span>'); };
+  dm_opener = _ph(dm_opener);
+  rl_opener = _ph(rl_opener);
+
   var openerContent = scriptNotice
     + scriptRow('📱 Cell Phone Opener', dm_opener, 'opener-cell', [p1n, p2n], [], dinovaNames)
     + scriptRow('📞 Restaurant Line Opener', rl_opener, 'opener-line');
