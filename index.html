@@ -85,9 +85,12 @@
   .dot-green  { background:#1D9E75; }
   .dot-purple { background:#534AB7; }
   .dot-blue   { background:var(--blue-mid); }
-  .nd-body { flex:1; min-width:0; }
+  .nd-body { flex:1; min-width:0; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+  .nd-left { min-width:0; }
   .nd-name { font-size:13px; font-weight:500; color:var(--text); }
-  .nd-meta { display:flex; gap:8px; margin-top:3px; flex-wrap:wrap; align-items:center; }
+  .nd-sub { font-size:10px; color:var(--muted); margin-top:1px; }
+  .nd-meta { display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-end; flex-shrink:0; }
+  .nd-badge-rev { background:#FFF8E1; color:#8A6D00; }
   .nd-badge { font-size:10px; font-weight:600; padding:1px 6px; border-radius:4px; }
   .nd-badge-price  { background:var(--purple-lt); color:var(--purple); }
   .nd-badge-dist   { background:#F0F0F0; color:#555; }
@@ -587,16 +590,21 @@ function discRow(boldQ, tipA) {
     + '</div>';
 }
 
-function ndItem(dotClass, name, price, dist, gmv, tag) {
-  var html = '<div class="nd-item"><div class="nd-dot ' + dotClass + '"></div><div class="nd-body">';
-  html += '<div class="nd-name">' + name + '</div>';
-  html += '<div class="nd-meta">';
-  if (price) html += '<span class="nd-badge nd-badge-price">' + price + '</span>';
-  if (dist)  html += '<span class="nd-badge nd-badge-dist">' + dist + '</span>';
-  if (gmv)   html += '<span class="nd-badge nd-badge-gmv">' + gmv + '</span>';
-  if (tag)   html += '<span class="nd-badge nd-badge-tag">' + tag + '</span>';
-  html += '</div></div></div>';
-  return html;
+function ndItem(dotClass, item) {
+  item = item || {};
+  var reviews = item.reviews || item.google_reviews || item.reviews_count || '';
+  var badges = '';
+  if (item.price) badges += '<span class="nd-badge nd-badge-price">' + item.price + '</span>';
+  if (item.dist)  badges += '<span class="nd-badge nd-badge-dist">' + item.dist + '</span>';
+  if (item.gmv)   badges += '<span class="nd-badge nd-badge-gmv">' + item.gmv + '</span>';
+  if (reviews)    badges += '<span class="nd-badge nd-badge-rev">★ ' + reviews + '</span>';
+  if (item.tag)   badges += '<span class="nd-badge nd-badge-tag">' + item.tag + '</span>';
+  var sub = item.cuisine ? '<div class="nd-sub">' + item.cuisine + '</div>' : '';
+  return '<div class="nd-item"><div class="nd-dot ' + dotClass + '"></div>'
+    + '<div class="nd-body">'
+    + '<div class="nd-left"><div class="nd-name">' + item.name + '</div>' + sub + '</div>'
+    + '<div class="nd-meta">' + badges + '</div>'
+    + '</div></div>';
 }
 
 function renderNDTab(p) {
@@ -605,19 +613,19 @@ function renderNDTab(p) {
     var items = p.partners.filter(function(x) { return x && x.name; });
     if (!items.length) return '<div class="nd-empty">No nearby partners found</div>';
     for (var i = 0; i < items.length; i++) {
-      html += ndItem('dot-green', items[i].name, items[i].price, items[i].dist, items[i].gmv, items[i].tag);
+      html += ndItem('dot-green', items[i]);
     }
   } else if (activeNDTab === 'bilt') {
     var items = p.bilt.filter(function(x) { return x && x.name; });
     if (!items.length) return '<div class="nd-empty">No BILT buildings mapped for this market</div>';
     for (var i = 0; i < items.length; i++) {
-      html += ndItem('dot-purple', items[i].name, '', '', '', '');
+      html += ndItem('dot-purple', { name: items[i].name });
     }
   } else if (activeNDTab === 'dinova') {
     var items = p.dinova.filter(function(x) { return x && x.name; });
     if (!items.length) return '<div class="nd-empty">No Dinova companies for this market</div>';
     for (var i = 0; i < items.length; i++) {
-      html += ndItem('dot-blue', items[i].name, '', '', '', '');
+      html += ndItem('dot-blue', { name: items[i].name });
     }
   }
   return html;
