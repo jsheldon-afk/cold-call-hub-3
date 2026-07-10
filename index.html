@@ -24,7 +24,9 @@
   .topbar span { font-size:11px; opacity:0.7; }
 
   /* SEARCH */
-  .search-bar { background:var(--white); border-bottom:1px solid var(--border); padding:12px 24px; position:sticky; top:52px; z-index:99; }
+  .search-bar { background:var(--white); border-bottom:1px solid var(--border); padding:10px 24px; position:sticky; top:0; z-index:99; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .search-main { flex:1; min-width:0; }
+  .search-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; }
   .search-wrap { position:relative; max-width:480px; }
   .search-wrap input { width:100%; padding:9px 14px 9px 38px; font-size:14px; border:1.5px solid var(--border); border-radius:8px; outline:none; background:var(--bg); transition:border-color 0.15s; }
   .search-wrap input:focus { border-color:var(--blue); background:var(--white); }
@@ -159,8 +161,8 @@
   #auth-gate .g-btn-wrap { display:flex; justify-content:center; min-height:44px; }
   #auth-error { display:none; background:#FCEBEB; color:#A32D2D; border-radius:6px; padding:10px 14px; font-size:12px; margin-top:14px; text-align:left; line-height:1.5; }
   #auth-loading { display:none; font-size:12px; color:var(--muted); margin-top:14px; }
-  .signout-btn { background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.3); border-radius:5px; font-size:11px; font-weight:600; padding:4px 10px; cursor:pointer; }
-  .signout-btn:hover { background:rgba(255,255,255,0.25); }
+  .signout-btn { background:var(--blue-lt); color:var(--blue); border:1px solid var(--border); border-radius:5px; font-size:11px; font-weight:600; padding:5px 10px; cursor:pointer; }
+  .signout-btn:hover { background:#DCEBFB; }
   body.locked .topbar, body.locked .search-bar, body.locked .main { filter:blur(4px); pointer-events:none; user-select:none; }
 </style>
 </head>
@@ -176,23 +178,21 @@
   </div>
 </div>
 
-<div class="topbar">
-  <h1>SEATED &nbsp;·&nbsp; Cold Call Hub</h1>
-  <div style="display:flex; align-items:center; gap:14px;">
-    <span id="mkt-label"></span>
-    <span id="user-email" style="font-size:11px; opacity:0.85;"></span>
+<div class="search-bar">
+  <div class="search-main">
+    <div class="search-wrap" id="search-wrap">
+      <span class="icon">🔍</span>
+      <input type="text" id="search-input" placeholder="Search any restaurant..." autocomplete="off" />
+      <div class="dropdown" id="dropdown" style="display:none"></div>
+    </div>
+    <div class="search-hint" id="search-hint">Type a restaurant name to load the full call sheet</div>
+  </div>
+  <div class="search-actions">
+    <span id="mkt-label" style="font-size:11px; color:var(--muted);"></span>
+    <span id="user-email" style="font-size:11px; color:var(--muted);"></span>
     <button id="export-csv-btn" class="signout-btn" style="display:none;" onclick="exportUrlsCsv()">⬇ Export URLs CSV</button>
     <button id="signout-btn" class="signout-btn" style="display:none;" onclick="signOut()">Sign out</button>
   </div>
-</div>
-
-<div class="search-bar">
-  <div class="search-wrap" id="search-wrap">
-    <span class="icon">🔍</span>
-    <input type="text" id="search-input" placeholder="Search any restaurant..." autocomplete="off" />
-    <div class="dropdown" id="dropdown" style="display:none"></div>
-  </div>
-  <div class="search-hint" id="search-hint">Type a restaurant name to load the full call sheet</div>
 </div>
 
 <div class="main" id="main">
@@ -771,16 +771,6 @@ function render() {
     + '</div>'
 
     + '<div class="card" style="margin-top:12px">'
-    + '<div class="card-header">Namedroppers</div>'
-    + '<div class="nd-tabs">'
-    + '<div class="nd-tab ' + (activeNDTab==='partner'?'active-partner':'') + '" onclick="setNDTab(\'partner\')">Partners (' + ndCount[0] + ')</div>'
-    + '<div class="nd-tab ' + (activeNDTab==='bilt'?'active-bilt':'') + '" onclick="setNDTab(\'bilt\')">BILT (' + ndCount[1] + ')</div>'
-    + '<div class="nd-tab ' + (activeNDTab==='dinova'?'active-dinova':'') + '" onclick="setNDTab(\'dinova\')">Dinova (' + ndCount[2] + ')</div>'
-    + '</div>'
-    + '<div class="nd-items" id="nd-items">' + renderNDTab(p) + '</div>'
-    + '</div>'
-
-    + '<div class="card" style="margin-top:12px">'
     + '<div class="panel-tabs" style="flex-wrap:wrap">'
     + '<div class="panel-tab ' + (activeTopTab==='opener'?'active':'') + '" data-group="top" data-tab="opener" onclick="setPanelTab(\'top\',\'opener\')">📞📱 Opener</div>'
     + '<div class="panel-tab ' + (activeTopTab==='close'?'active':'') + '" data-group="top" data-tab="close" onclick="setPanelTab(\'top\',\'close\')">🤝 Close</div>'
@@ -792,6 +782,15 @@ function render() {
   // BUILD RIGHT COLUMN
   var rightCol = ''
     + '<div class="card">'
+    + '<div class="card-header">Namedroppers</div>'
+    + '<div class="nd-tabs">'
+    + '<div class="nd-tab ' + (activeNDTab==='partner'?'active-partner':'') + '" onclick="setNDTab(\'partner\')">Partners (' + ndCount[0] + ')</div>'
+    + '<div class="nd-tab ' + (activeNDTab==='bilt'?'active-bilt':'') + '" onclick="setNDTab(\'bilt\')">BILT (' + ndCount[1] + ')</div>'
+    + '<div class="nd-tab ' + (activeNDTab==='dinova'?'active-dinova':'') + '" onclick="setNDTab(\'dinova\')">Dinova (' + ndCount[2] + ')</div>'
+    + '</div>'
+    + '<div class="nd-items" id="nd-items">' + renderNDTab(p) + '</div>'
+    + '</div>'
+    + '<div class="card" style="margin-top:12px">'
     + '<div class="card-header">🛡 Objection Handling</div>'
     + '<div class="panel-tabs" style="flex-wrap:wrap">' + objTabsHtml + '</div>'
     + objPanelsHtml
