@@ -702,20 +702,20 @@ function render() {
   var close_new = "Like I said, we’re finalizing our new partner list right now — actively getting some new partners on board — so I’d want to find a time to chat as soon as you have a free 15 minutes. I actually have some time tomorrow at 3 PM — does that work for you?";
   var closeContent = scriptNotice
     + scriptRow('Close', close_new)
-    + scriptRow('Lock · Restaurant Line', rl_lock)
-    + scriptRow('Lock · Cell', dm_lock);
+    + scriptRow('Lock · Cell', rl_lock)
+    + scriptRow('Lock · Restaurant Line', dm_lock);
 
   // Gatekeeper Stonewall (shown as an objection tab)
   var gkStonewall = rl_gatekeeper.replace(/\n/g, '<br>');
 
   // DISCOVERY
   var discContent = ''
-    + discRow("<b>What are you doing right now to target corporate diners or guests that might not have heard of you before?</b>", "Listen for gaps in their strategy. If nothing, that’s your opening. If a competitor, that’s a comparison opportunity.")
-    + discRow("<b>What does a typical week look like for you in terms of covers — are there nights you’re looking to drive more traffic?</b>", "Listen for patterns in the book. Understand where the gaps are so you can frame the pitch around real need.")
-    + discRow("<b>Are you doing anything right now to drive covers — OpenTable promotions, social, anything like that?</b>", "Listen for gaps in their strategy. If nothing, that’s your opening. If a competitor, that’s a comparison opportunity.")
-    + discRow("<b>Who’s your typical guest — neighborhood regulars, destination diners, corporate accounts?</b>", "Listen for alignment with BILT residents (young professional, nearby) or Dinova (corporate expense account). Use in your close.")
-    + discRow("<b>Just so I make sure I’m talking to the right person — what does the process look like for adding a new partnership? Is that something you can approve, or would the owner need to be looped in?</b>", "Only ask if unsure you have the DM. Get to the owner if needed.")
-    + discRow("<b>What POS system do you use? Just want to confirm compatibility before we hop on.</b>", "Ask when locking the meeting. Confirms intent and surfaces any ops objection early.")
+    + discRow("<b>“What are you doing right now to target corporate diners or guests that might not have heard of you before?”</b>", DIR("[Listen for gaps in their strategy. If nothing, that’s your opening. If a competitor, that’s a comparison opportunity.]"))
+    + discRow("<b>“What does a typical week look like for you in terms of covers — are there nights you’re looking to drive more traffic?”</b>", DIR("[Listen for patterns in the book. Understand where the gaps are so you can frame the pitch around real need.]"))
+    + discRow("<b>“Are you doing anything right now to drive covers — OpenTable promotions, social, anything like that?”</b>", DIR("[Listen for gaps in their strategy. If nothing, that’s your opening. If a competitor, that’s a comparison opportunity.]"))
+    + discRow("<b>“Who’s your typical guest — neighborhood regulars, destination diners, corporate accounts?”</b>", DIR("[Listen for alignment with BILT residents (young professional, nearby) or Dinova (corporate expense account). Use in your close.]"))
+    + discRow("<b>“Just so I make sure I’m talking to the right person — what does the process look like for adding a new partnership? Is that something you can approve, or would the owner need to be looped in?”</b>", DIR("[Only ask if unsure you have the DM. Get to the owner if needed.]"))
+    + discRow("<b>“What POS system do you use? Just want to confirm compatibility before we hop on.”</b>", DIR("[Ask when locking the meeting. Confirms intent and surfaces any ops objection early.]"))
     + '<div class="disc-closing">CLOSING — Confirm it’s a priority before you hang up</div>'
     + '<div class="disc-closing-body">“Based on everything you’ve shared — this sounds like a strong fit. I want to make sure I’m not wasting your time: is bringing in more guests something you’re actively focused on right now?”\n\n' + DIR("[Yes / it’s a priority] → Move straight to closing the meeting.") + '\n' + DIR("[Back-burner / not right now] → “Got it — when does that change? I’ll follow up then. What’s the best way to reach you?”") + '</div>';
 
