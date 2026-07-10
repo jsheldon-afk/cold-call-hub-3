@@ -696,16 +696,17 @@ function render() {
   // OPENER TAB — cell opener first, restaurant opener second, then the shared talk track
   var openerContent = scriptNotice
     + scriptRow('📱 Cell Phone Opener', dm_opener, 'opener-cell', [p1n, p2n], [], dinovaNames)
-    + scriptRow('📞 Restaurant Line Opener', rl_opener, 'opener-line')
-    + scriptRow('Gatekeeper · Restaurant Line', rl_gatekeeper, 'opener-line')
-    + scriptRow('Qualify DM · Restaurant Line', rl_qualify, 'opener-line')
-    + scriptRow('Quantify', quantify)
-    + scriptRow('Localize', localize, '', [p1n, p2n])
-    + scriptRow('Personalize', personalize, '', [], biltNames, dinovaNames)
-    + scriptRow('Close · Restaurant Line', rl_close)
-    + scriptRow('Close · Cell', dm_close)
+    + scriptRow('📞 Restaurant Line Opener', rl_opener, 'opener-line');
+
+  // CLOSE TAB
+  var close_new = "Like I said, we’re finalizing our new partner list right now — actively getting some new partners on board — so I’d want to find a time to chat as soon as you have a free 15 minutes. I actually have some time tomorrow at 3 PM — does that work for you?";
+  var closeContent = scriptNotice
+    + scriptRow('Close', close_new)
     + scriptRow('Lock · Restaurant Line', rl_lock)
     + scriptRow('Lock · Cell', dm_lock);
+
+  // Gatekeeper Stonewall (shown as an objection tab)
+  var gkStonewall = rl_gatekeeper.replace(/\n/g, '<br>');
 
   // DISCOVERY
   var discContent = ''
@@ -720,6 +721,7 @@ function render() {
 
   // OBJECTIONS — each becomes its own tab
   var objections = [
+    { t: "Gatekeeper Stonewall!", q: "Gatekeeper Stonewall! · Restaurant Line", a: gkStonewall },
     { t: "What’s Seated?", q: "“What’s Seated?”", a: "<b>Say:</b> “We’re a restaurant discovery program — partnered with the biggest credit card rewards platforms in the country, think Bilt, Bank of America, and similar. We connect their members — millions of high-intent diners — directly to restaurants like yours. No upfront cost, no subscription. We only make money when we drive you revenue. That’s the 30-second version — it’s honestly easier to show than explain. That’s why I want to grab 20 minutes.”" },
     { t: "Don’t do Partnerships", q: "“We don’t do partnerships”", a: "<b>Say:</b> “Got it — this is probably a little different than what you typically get calls about, so let me take a step back. We’re a restaurant discovery platform, but you can think of us like a private concierge. We feature great restaurants around you like " + fb1 + " and " + fb2 + " and send in luxury renters and corporate diners throughout the week to boost traffic.<br><br>Out of curiosity — are you looking for ways to bring in some new diners, and could you handle a few additional covers throughout the week?”" },
     { t: "Not interested?", q: "“Not interested?”", a: DIR("[Mirror — pause]") + "<br><b>Say:</b> “‘Not interested?’ … When you say that, is it a cost thing, or just don’t want another platform?”<br><br>" + DIR("[If cost] → “No upfront fees, nothing like that.”") + "<br>" + DIR("[If ops] → “Zero extra work for your staff — " + (p1n || "our partner restaurants") + " run it with no operational changes.”") },
@@ -781,16 +783,20 @@ function render() {
     + '<div class="nd-tab ' + (activeNDTab==='dinova'?'active-dinova':'') + '" onclick="setNDTab(\'dinova\')">Dinova (' + ndCount[2] + ')</div>'
     + '</div>'
     + '<div class="nd-items" id="nd-items">' + renderNDTab(p) + '</div>'
+    + '</div>'
+    + '<div class="card" style="margin-top:12px">'
+    + '<div class="card-header">🔍 Discovery Questions</div>'
+    + discContent
     + '</div>';
 
   // BUILD RIGHT COLUMN
   var rightCol = '<div class="card">'
     + '<div class="panel-tabs" style="flex-wrap:wrap">'
     + '<div class="panel-tab ' + (activeTopTab==='opener'?'active':'') + '" data-group="top" data-tab="opener" onclick="setPanelTab(\'top\',\'opener\')">📞📱 Opener</div>'
-    + '<div class="panel-tab ' + (activeTopTab==='discovery'?'active':'') + '" data-group="top" data-tab="discovery" onclick="setPanelTab(\'top\',\'discovery\')">🔍 Discovery Questions</div>'
+    + '<div class="panel-tab ' + (activeTopTab==='close'?'active':'') + '" data-group="top" data-tab="close" onclick="setPanelTab(\'top\',\'close\')">🤝 Close</div>'
     + '</div>'
     + '<div class="panel-content ' + (activeTopTab==='opener'?'active':'') + '" data-group="top" data-tab="opener">' + openerContent + '</div>'
-    + '<div class="panel-content ' + (activeTopTab==='discovery'?'active':'') + '" data-group="top" data-tab="discovery">' + discContent + '</div>'
+    + '<div class="panel-content ' + (activeTopTab==='close'?'active':'') + '" data-group="top" data-tab="close">' + closeContent + '</div>'
     + '</div>'
     + '<div class="card" style="margin-top:12px">'
     + '<div class="card-header">🛡 Objection Handling</div>'
