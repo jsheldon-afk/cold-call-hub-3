@@ -706,11 +706,20 @@ function render() {
   var confirmPriority = "“Based on everything you’ve shared — this sounds like a strong fit. I want to make sure I’m not wasting your time: is bringing in more guests something you’re actively focused on right now?”"
     + "\n\n" + DIR("[Yes / it’s a priority] → Move straight to closing the meeting.")
     + "\n" + DIR("[Back-burner / not right now] →") + " “Got it — when does that change? I’ll follow up then. What’s the best way to reach you?”";
+  var standardLock = "Perfect — I’ll send a calendar invite right now. What’s the best email?"
+    + "\n\n“Just sent it — if anything comes up, shoot me a text. My number’s in the invite.”"
+    + "\n\n“Oh — real quick, what POS system do you use? Just want to confirm compatibility.”";
+  var cellAsk = DIR("[If you reached them on the restaurant’s business line, get their cell before you hang up:]")
+    + "\n\n“Oh — and listen, I don’t want to tie you up on your business line next time I follow up. What’s the best cell to reach you on?”"
+    + "\n\n" + DIR("[They give it]")
+    + "\n“Perfect — I’ll text you a reminder before we hop on.”"
+    + "\n\n" + DIR("[They don’t give it out]")
+    + "\n“Totally hear you, not going to spam you — I just know you’re always running around and it’s easier to text than play phone tag. Also I can send you a link to what we’d be looking at on the call so you can preview it beforehand.”";
   var closeContent = scriptNotice
     + scriptRow('Confirm It’s a Priority', confirmPriority)
     + scriptRow('Close', close_new)
-    + scriptRow('Lock · Cell', rl_lock)
-    + scriptRow('Lock · Restaurant Line', dm_lock);
+    + scriptRow('Lock', standardLock)
+    + scriptRow('Restaurant Line — Get Their Cell #', cellAsk);
 
   // Gatekeeper Stonewall (shown as an objection tab)
   var gkStonewall = rl_gatekeeper.replace(/\n/g, '<br>');
