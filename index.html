@@ -771,16 +771,6 @@ function render() {
     + '</div>'
 
     + '<div class="card" style="margin-top:12px">'
-    + '<div class="card-header">Match Signals</div>'
-    + '<div class="signals">'
-    + (p1n ? '<span class="sig sig-partner">✓ Partners nearby</span>' : '')
-    + (b1.name ? '<span class="sig sig-bilt">✓ BILT buildings</span>' : '')
-    + (d1n ? '<span class="sig sig-dinova">✓ Dinova corporates</span>' : '')
-    + (p.accolades ? '<span class="sig sig-acc">✓ ' + p.accolades + '</span>' : '')
-    + (!p1n && !b1.name && !d1n && !p.accolades ? '<span class="sig-none">No signals found</span>' : '')
-    + '</div></div>'
-
-    + '<div class="card" style="margin-top:12px">'
     + '<div class="card-header">Namedroppers</div>'
     + '<div class="nd-tabs">'
     + '<div class="nd-tab ' + (activeNDTab==='partner'?'active-partner':'') + '" onclick="setNDTab(\'partner\')">Partners (' + ndCount[0] + ')</div>'
