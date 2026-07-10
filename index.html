@@ -658,7 +658,8 @@ function render() {
   var personalize = "I came across " + p.name + " — " + accolPhrase + ". " + biltSafe + " And we’re connected to " + dinPhrase + " through our corporate dining program. You’d be a really strong fit for our diner base.";
 
   // RESTAURANT LINE
-  var rl_opener = "Hi — this is [Your Name]. I’m looking to send some guests to " + p.name + ", but I’d need to speak with whoever handles partnerships. Could you help me get in contact with the owner?";
+  var rl_opener = "Hi — this is [Your Name]. I’m looking to send some guests to " + p.name + ", but I’d need to speak with whoever handles partnerships. Could you help me get in contact with the owner?"
+    + "\n\n" + DIR("[☝ After you get the DM, use the Mobile Opener above.]");
   var rl_gatekeeper = DIR("[They won’t / can’t give you a name, number, or a better time]")
     + "\n“I hear you — the reason I’m asking is we have guests we’re looking to send to " + p.name + " as soon as possible, so I need to get in touch with someone this week to see if this would be a good fit. Is whoever handles this kind of thing going to be in later today or tomorrow?”"
     + "\n" + DIR("[Push a little here to figure out the best time for a call-back]")
@@ -729,9 +730,7 @@ function render() {
     + discRow("<b>“What are you doing right now to target corporate diners or guests that might not have heard of you before?”</b>", DIR("[Listen for gaps in their strategy. If nothing, that’s your opening. If a competitor, that’s a comparison opportunity.]"))
     + discRow("<b>“What does a typical week look like for you in terms of covers — are there nights you’re looking to drive more traffic?”</b>", DIR("[Listen for patterns in the book. Understand where the gaps are so you can frame the pitch around real need.]"))
     + discRow("<b>“Are you doing anything right now to drive covers — OpenTable promotions, social, anything like that?”</b>", DIR("[Listen for gaps in their strategy. If nothing, that’s your opening. If a competitor, that’s a comparison opportunity.]"))
-    + discRow("<b>“Who’s your typical guest — neighborhood regulars, destination diners, corporate accounts?”</b>", DIR("[Listen for alignment with BILT residents (young professional, nearby) or Dinova (corporate expense account). Use in your close.]"))
-    + discRow("<b>“Just so I make sure I’m talking to the right person — what does the process look like for adding a new partnership? Is that something you can approve, or would the owner need to be looped in?”</b>", DIR("[Only ask if unsure you have the DM. Get to the owner if needed.]"))
-    + discRow("<b>“What POS system do you use? Just want to confirm compatibility before we hop on.”</b>", DIR("[Ask when locking the meeting. Confirms intent and surfaces any ops objection early.]"));
+    + discRow("<b>“Who’s your typical guest — neighborhood regulars, destination diners, corporate accounts?”</b>", DIR("[Listen for alignment with BILT residents (young professional, nearby) or Dinova (corporate expense account). Use in your close.]"));
 
   // OBJECTIONS — each becomes its own tab
   var objections = [
