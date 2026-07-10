@@ -653,13 +653,20 @@ function render() {
   var d1 = p.dinova[0] || {}, d2 = p.dinova[1] || {}, d3 = p.dinova[2] || {};
   var d1n = d1.name || '', d2n = d2.name || '', d3n = d3.name || '';
 
+  // Sheet getter (Scripts tab value if present, else the built-in default) — no {token} fill
+  function SG(key, def) {
+    return (SCRIPTS[key] != null && String(SCRIPTS[key]).trim() !== '') ? String(SCRIPTS[key]) : def;
+  }
+
   var nbhd = p.neighborhood || 'your neighborhood';
-  var accolPhrase = p.accolades ? ("you’re featured in " + p.accolades) : "your Google reviews stood out";
+  var accolPhrase = p.accolades
+    ? SG('accol_featured', "you’re featured in {accolades}").split('{accolades}').join(p.accolades)
+    : SG('accol_default', "your Google reviews stood out");
   var biltSafe = p.bilt_safe || '';
 
   var biltNames = [b1.name, b2.name, b3.name].filter(Boolean);
   var dinovaNames = [d1n, d2n, d3n].filter(Boolean);
-  var dinPhrase = dinovaNames.length === 0 ? "our corporate dining partners"
+  var dinPhrase = dinovaNames.length === 0 ? SG('din_phrase_none', "our corporate dining partners")
     : dinovaNames.length === 1 ? dinovaNames[0]
     : dinovaNames.length === 2 ? dinovaNames[0] + ' and ' + dinovaNames[1]
     : dinovaNames[0] + ', ' + dinovaNames[1] + ', and ' + dinovaNames[2];
@@ -668,13 +675,14 @@ function render() {
 
   // Dynamic values used to fill {tokens} in editable scripts.
   var isNYC = (p.market || '').toLowerCase().indexOf('new york') >= 0;
-  var restCount = isNYC ? "3K restaurants — we’re actually based in NYC" : "3,000 restaurants";
-  var fb1 = p1n || "a similar local spot";
-  var fb2 = p2n || "another local partner";
+  var restCount = isNYC ? SG('quantify_rest_nyc', "3K restaurants — we’re actually based in NYC")
+                        : SG('quantify_rest_default', "3,000 restaurants");
+  var fb1 = p1n || SG('partner_fallback_1', "a similar local spot");
+  var fb2 = p2n || SG('partner_fallback_2', "another local partner");
   var dinOne = d1n || dinPhrase || "major corporate accounts";
   var V = { name: p.name, nbhd: nbhd, p1: fb1, p2: fb2, dinOne: dinOne, restCount: restCount,
             biltSafe: biltSafe, dinPhrase: dinPhrase, accolPhrase: accolPhrase,
-            partnerFallback: (p1n || "our partner restaurants") };
+            partnerFallback: (p1n || SG('partner_fallback_objection', "our partner restaurants")) };
   // S(): use the Scripts-tab value if present, else the built-in default; fills {tokens}
   function S(key, def) {
     var t = (SCRIPTS[key] != null && String(SCRIPTS[key]).trim() !== '') ? String(SCRIPTS[key]) : def;
