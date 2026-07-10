@@ -653,14 +653,13 @@ function render() {
   var personalize = "I came across " + p.name + " — " + accolPhrase + ". " + biltSafe + " And we’re connected to " + dinPhrase + " through our corporate dining program. You’d be a really strong fit for our diner base.";
 
   // RESTAURANT LINE
-  var rl_opener = "Hi — I’m calling to invite " + p.name + " to join the Seated network. Could you point me to whoever handles partnerships for " + p.name + "?";
+  var rl_opener = "Hi — this is [Your Name]. I’m looking to send some guests to " + p.name + ", but I’d need to speak with whoever handles partnerships. Could you help me get in contact with the owner?";
   var rl_gatekeeper = DIR("[Can’t transfer / owner unavailable — get their name, a direct number, and best callback time. Only schedule with someone who can approve.]")
     + "\n\n“What’s their name? And is there a better number to reach them directly — a cell or direct line?”"
     + "\n\n" + DIR("[They won’t / can’t give you a name, number, or a better time]")
     + "\n“I hear you — the reason I’m asking is we have guests we’re looking to send to " + p.name + " as soon as possible, so I need to get in touch with someone this week to see if this would be a good fit. Is whoever handles this kind of thing going to be in later today or tomorrow?”"
     + "\n" + DIR("[Push a little here to figure out the best time for a call-back]")
-    + "\n\n" + DIR("[They say they don’t do partnerships / “we don’t do that”]")
-    + "\n“Got it — this isn’t a traditional advertising pitch, there’s no upfront cost and it’s not a subscription. I just want to make sure I’m talking to the right person — who would handle something like adding a new revenue channel or a new customer program? Is that the owner?”";
+    + "\n\n" + DIR("[If they say they don’t do partnerships / “we don’t do that” → see the “Don’t do Partnerships” objection tab below.]");
   var rl_qualify = DIR("[Once you have the DM]")
     + "\n“Great — and just so I make sure I’m talking to the right person, what’s your role at " + p.name + "?”"
     + "\n\n" + DIR("[Owner / final DM] → Skip to Quantify.")
@@ -677,18 +676,10 @@ function render() {
     + "\n\n“Oh — real quick, what POS system do you use? Just want to confirm compatibility.”";
 
   // DM CELL
-  var dm_opener = "Hey [Owner Name] — it’s [Your Name] over at Seated. I’m calling because I manage all the diners for Bank of America and we’re launching a new batch of restaurants this summer — I don’t think you’re working with them, right?"
-    + "\n\n" + DIR("[No? What? What’s this about?]")
-    + "\n“My job is to match high-net-worth diners — like from Bank of America, " + dinOne + " and luxury renters — with great restaurants around the city.”"
-    + "\n\n“For context, my company is partnered with the largest credit card rewards platforms in the country, we power dining for millions of members nationally, work with about " + restCount + ", and we’ve been doing this for 10 years.”"
-    + "\n\n" + DIR("[Not interested]")
-    + "\n“Not interested? I’ll level with you — I’m sure this is the 30th call this week you’ve gotten, but this isn’t a traditional marketing pitch. My job is to match high-net-worth diners — like from Bank of America, " + dinOne + " and luxury renters — with great restaurants around the city.”"
-    + "\n“In " + nbhd + ", we work with " + fb1 + " and " + fb2 + " — and we’re actively expanding here right now. The reason restaurants like " + fb1 + " partner with us is that we’re exceptionally good at filling tables that sit empty with diners they wouldn’t easily have access to.”"
-    + "\n“What are you doing right now to target corporate diners or guests that might not have heard of you before?”"
-    + "\n\n" + DIR("[Send me an email / call me back later]")
-    + "\n“Cool, I can totally do that. Before I write something up for you, can I ask you a question to see if this is a fit for " + p.name + "?”"
-    + "\n“For context, my company focuses on matching corporate diners — like Bank of America, " + dinOne + " and luxury renters — with restaurants like " + fb1 + " and " + fb2 + ".”"
-    + "\n“What are you doing right now to target corporate diners or guests that might not have heard of you before?”";
+  var dm_opener = "Hey [Owner Name]! How are you?"
+    + "\n\n" + DIR("[Wait for answer]")
+    + "\n\nIt’s [Your Name] over at Seated… gonna be quick. The reason I’m calling is I manage the diner networks for companies like BofA and " + dinOne + ", and I’m working with " + fb1 + " and " + fb2 + " to send in some of our guests throughout the week — but I’m running into an issue where sometimes we don’t have enough restaurants to recommend to our diners…"
+    + "\n\nI came across " + p.name + " and it had great reviews, so I was curious — are there any times throughout the week where you could handle a few more guests if we sent them your way?";
   var dm_quantify = "For context, my company is partnered with the largest credit card rewards platforms in the country, we power dining for millions of members nationally, work with about " + restCount + ", and we’ve been doing this for 10 years.";
   var dm_close = "Are you currently working with Bank of America or any corporate dining programs?"
     + "\n\n" + DIR("[No]")
@@ -730,9 +721,11 @@ function render() {
   // OBJECTIONS — each becomes its own tab
   var objections = [
     { t: "What’s Seated?", q: "“What’s Seated?”", a: "<b>Say:</b> “We’re a restaurant discovery program — partnered with the biggest credit card rewards platforms in the country, think Bilt, Bank of America, and similar. We connect their members — millions of high-intent diners — directly to restaurants like yours. No upfront cost, no subscription. We only make money when we drive you revenue. That’s the 30-second version — it’s honestly easier to show than explain. That’s why I want to grab 20 minutes.”" },
+    { t: "Don’t do Partnerships", q: "“We don’t do partnerships”", a: "<b>Say:</b> “Got it — this is probably a little different than what you typically get calls about, so let me take a step back. We’re a restaurant discovery platform, but you can think of us like a private concierge. We feature great restaurants around you like " + fb1 + " and " + fb2 + " and send in luxury renters and corporate diners throughout the week to boost traffic.<br><br>Out of curiosity — are you looking for ways to bring in some new diners, and could you handle a few additional covers throughout the week?”" },
+    { t: "Not interested?", q: "“Not interested?”", a: DIR("[Mirror — pause]") + "<br><b>Say:</b> “‘Not interested?’ … When you say that, is it a cost thing, or just don’t want another platform?”<br><br>" + DIR("[If cost] → “No upfront fees, nothing like that.”") + "<br>" + DIR("[If ops] → “Zero extra work for your staff — " + (p1n || "our partner restaurants") + " run it with no operational changes.”") },
     { t: "Send me an email", q: "“Send me an email”", a: "<b>Say:</b> “Totally — before I do, I just want to make sure this is a good fit. Are you focused on getting more people through the door during the week?”<br><br>" + DIR("[Once they engage] → “I actually have a slot open tomorrow at 2 PM. Does that work? I’ll keep it to 20 minutes.”") },
-    { t: "Not interested", q: "“Not interested”", a: DIR("[Mirror — pause]") + "<br><b>Say:</b> “‘Not interested?’ … When you say that, is it a cost thing, or just don’t want another platform?”<br><br>" + DIR("[If cost] → “No upfront fees, nothing like that.”") + "<br>" + DIR("[If ops] → “Zero extra work for your staff — " + (p1n || "our partner restaurants") + " run it with no operational changes.”") },
     { t: "What does it cost?", q: "“What does it cost?”", a: "<b>Say:</b> “The price is entirely up to you — depends on how much you want to lean into filling empty seats. Makes a lot more sense when I can show you. Does [time] work?”<br><br>" + DIR("Do NOT quote percentages. Do NOT explain occupancy pricing. Get the meeting.") },
+    { t: "Too Expensive", q: "“Too expensive”", a: "<b>Say:</b> “Okay — the reason I ask is because many of our partners are dealing with really expensive rent and tons of other fixed costs. Seated is designed to be an easy way to fill empty seats and drive incremental traffic, so you end up a bit more profitable each day — and there’s actually no upfront cost. Why don’t we schedule a quick time to chat? If you like what you hear, great; if not, at least you’ll know what we’re offering. Could we chat tomorrow around 10 AM?”" },
     { t: "Used Seated before", q: "“We’ve used Seated before”", a: "<b>Say:</b> “Yeah, I actually see that — we’ve made some big changes since then. We added luxury building and corporate partnerships and significantly increased our volume. Are you open to hearing what’s different? I have time tomorrow — does that work?”" },
     { t: "We’re too busy", q: "“We’re too busy”", a: "<b>Say:</b> “That’s a great problem to have — and when things slow down, you’ll want something already in place. We work around your schedule. What does your calendar look like in the next couple weeks?”" },
     { t: "What is BILT?", q: "“What is BILT?”", a: "<b>Say:</b> “It’s a credit card rewards program built into leases at premium apartment buildings nearby — residents earn points paying rent and redeem them at restaurants close to where they live. " + biltSafe + " Worth 20 minutes?”" }
