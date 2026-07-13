@@ -425,7 +425,7 @@ function computeBrag(pool) {
   }
 }
 function loadBILT() {
-  return fetchSheetValues('BILT!A:H').then(function(vals) {
+  return fetchSheetValues('BILT!A:H').catch(function(){ return []; }).then(function(vals) {
     if (!vals.length) return; var H = colMap(vals[0]);
     for (var i = 1; i < vals.length; i++) { var r = vals[i]; var g = function(n){ var x=H[n]; return x==null?'':(r[x]!=null?String(r[x]):''); };
       var m = g('Market').trim(); if (!m) continue;
@@ -434,7 +434,7 @@ function loadBILT() {
   });
 }
 function loadDinova() {
-  return fetchSheetValues('Dinova!A:C').then(function(vals) {
+  return fetchSheetValues('Dinova!A:C').catch(function(){ return []; }).then(function(vals) {
     if (!vals.length) return; var H = colMap(vals[0]);
     for (var i = 1; i < vals.length; i++) { var r = vals[i]; var g = function(n){ var x=H[n]; return x==null?'':(r[x]!=null?String(r[x]):''); };
       var m = g('Seated Market').trim(); if (!m) continue;
@@ -504,7 +504,7 @@ function computeND(a) {
 }
 
 function loadScriptsFromSheet() {
-  return fetchSheetValues('Scripts!A2:B').then(function(rows) {
+  return fetchSheetValues('Scripts!A2:B').catch(function(){ return []; }).then(function(rows) {
     SCRIPTS = {};
     for (var i = 0; i < rows.length; i++) {
       var k = rows[i][0];
