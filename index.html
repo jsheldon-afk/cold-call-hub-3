@@ -480,8 +480,15 @@ function lookScore(a, p) {
   if (a.price != null && p.price != null) { var d = Math.abs(a.price - p.price); s += d===0?0.2:(d===1?0.1:0); }
   return s;
 }
+function isFastCasual(x) { return (x.rtype || '').toLowerCase() === 'fast casual'; }
+function tierRank(t) { return t === 'National' ? 2 : (t === 'City' ? 1 : 0); }
 function computeND(a) {
-  var pool = (PARTNERS_BY_MKT[a.market] || []).filter(function(p) { return p.id !== a.id; });
+  var accFC = isFastCasual(a);
+  var pool = (PARTNERS_BY_MKT[a.market] || []).filter(function(p) {
+    if (p.id === a.id) return false;
+    if (!accFC && isFastCasual(p)) return false;  // don't name-drop fast-casual unless the account is fast-casual too
+    return true;
+  });
   var nd = { best:[], nearest:[], lookalike:[], topcity:[], topcuisine:[],
              bilt: BILT[a.market] || null, dinova: DINOVA[a.market] || null, cuisineLabel: a.cuisine || '' };
   if (!pool.length) return nd;
@@ -489,10 +496,13 @@ function computeND(a) {
   var byDist = pool.slice().sort(function(x, y) { return x._d - y._d; });
   nd.nearest = byDist.slice(0, 5);
   nd.lookalike = pool.slice().sort(function(x, y) { return (y._l - x._l) || (x._d - y._d); }).slice(0, 5);
-  nd.topcity = pool.slice().sort(function(x, y) { return y.brag - x.brag; }).slice(0, 5);
+  // Top City: only City/National-tagged namedroppers, ranked by brag
+  nd.topcity = pool.filter(function(p) { return p.tier === 'City' || p.tier === 'National'; })
+                   .sort(function(x, y) { return y.brag - x.brag; }).slice(0, 5);
+  // Top Cuisine: same cuisine family; prefer National/City tier, then brag
   var fa = cfam(a.cuisine);
   nd.topcuisine = pool.filter(function(p) { return a.cuisine && (p.cuisine.toLowerCase() === a.cuisine.toLowerCase() || cfam(p.cuisine) === fa); })
-                      .sort(function(x, y) { return y.brag - x.brag; }).slice(0, 5);
+                      .sort(function(x, y) { return (tierRank(y.tier) - tierRank(x.tier)) || (y.brag - x.brag); }).slice(0, 5);
   // BEST (C): nearest true look-alike + 2 closest/most-impressive
   var la = pool.filter(function(p) { return p._l >= 0.35; });
   var laPick = la.length ? la.reduce(function(m, p) { return p._d < m._d ? p : m; })
@@ -707,7 +717,7 @@ function partnerRow(p, dotClass) {
   var badges = '';
   if (p.price != null) badges += '<span class="nd-badge nd-badge-price">' + dollar(p.price) + '</span>';
   if (p._d != null)    badges += '<span class="nd-badge nd-badge-dist">' + p._d.toFixed(1) + 'mi</span>';
-  if (p.gmv)           badges += '<span class="nd-badge nd-badge-gmv">$' + commas(p.gmv) + '/mo</span>';
+  if (p.gmv)           badges += '<span class="nd-badge nd-badge-gmv">' + (p.gmv >= 500 ? '$' + Math.round(p.gmv/1000) + 'k/mo' : '<$1k/mo') + '</span>';
   if (p.reviews)       badges += '<span class="nd-badge nd-badge-rev">★ ' + commas(p.reviews) + '</span>';
   if (p.mich)          badges += '<span class="nd-badge nd-badge-tag">MICHELIN</span>';
   if (p.infat)         badges += '<span class="nd-badge nd-badge-tag">INFATUATION</span>';
@@ -875,9 +885,9 @@ function render() {
     + '<div class="nd-tabs" style="flex-wrap:wrap">'
     + ndTab('best', '⭐ Best')
     + ndTab('nearest', '📍 Nearest')
-    + ndTab('lookalike', 'Look-alikes')
-    + ndTab('topcity', 'Top City')
-    + ndTab('topcuisine', 'Top ' + (nd.cuisineLabel || 'Cuisine'))
+    + ndTab('lookalike', '👯 Look-alikes')
+    + ndTab('topcity', '🏙️ Top City')
+    + ndTab('topcuisine', '🍽️ Top ' + (nd.cuisineLabel || 'Cuisine'))
     + ndTab('bilt', 'BILT')
     + ndTab('dinova', 'Dinova')
     + '</div>'
