@@ -381,7 +381,7 @@ function fetchSheetValues(range) {
 
 // ── Parsing helpers for the Namedroppers sheet ──
 function colMap(headerRow) { var m = {}; for (var i = 0; i < headerRow.length; i++) m[String(headerRow[i] || '').trim()] = i; return m; }
-function n2(x) { var v = parseFloat(x); return isNaN(v) ? null : v; }
+function n2(x) { var v = parseFloat(String(x == null ? '' : x).replace(/[^0-9.\-]/g, '')); return isNaN(v) ? null : v; }
 function cleanCuisine(x) { x = String(x || '').trim(); return (!x || /^[0-9.]+$/.test(x)) ? '' : x; }
 function priceLvl(x) { var v = parseFloat(x); return (!isNaN(v) && v >= 0 && v <= 4) ? Math.round(v) : null; }
 
