@@ -364,7 +364,7 @@ function refreshAccessToken() {
 
 function fetchSheetValues(range) {
   var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID +
-            '/values/' + encodeURIComponent(range) + '?majorDimension=ROWS';
+            '/values/' + encodeURIComponent(range) + '?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE';
   function doFetch() {
     return fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
   }
