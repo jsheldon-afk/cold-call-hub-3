@@ -321,16 +321,72 @@ function onCredentialResponse(resp) {
   tokenClient.requestAccessToken({ prompt: '', hint: payload.email });
 }
 
+// ── IndexedDB cache (stale-while-revalidate) ──
+var IDB_NAME = 'cchCache', IDB_STORE = 'kv', CACHE_KEY = 'bundle_v1';
+function idbOpen() {
+  return new Promise(function(res, rej) {
+    var r = indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded = function() { r.result.createObjectStore(IDB_STORE); };
+    r.onsuccess = function() { res(r.result); };
+    r.onerror = function() { rej(r.error); };
+  });
+}
+function idbGet(key) {
+  return idbOpen().then(function(db) { return new Promise(function(res, rej) {
+    var t = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+    t.onsuccess = function() { res(t.result); }; t.onerror = function() { rej(t.error); };
+  }); }).catch(function() { return null; });
+}
+function idbSet(key, val) {
+  return idbOpen().then(function(db) { return new Promise(function(res, rej) {
+    var t = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE).put(val, key);
+    t.onsuccess = function() { res(); }; t.onerror = function() { rej(t.error); };
+  }); }).catch(function() {});
+}
+function idbDel(key) {
+  return idbOpen().then(function(db) { return new Promise(function(res) {
+    var t = db.transaction(IDB_STORE, 'readwrite').objectStore(IDB_STORE)['delete'](key);
+    t.onsuccess = function() { res(); }; t.onerror = function() { res(); };
+  }); }).catch(function() {});
+}
+function rebuildDerived() {
+  PARTNERS_BY_MKT = {};
+  for (var i = 0; i < PARTNERS.length; i++) { var p = PARTNERS[i]; (PARTNERS_BY_MKT[p.market] = PARTNERS_BY_MKT[p.market] || []).push(p); }
+  for (var m in PARTNERS_BY_MKT) if (PARTNERS_BY_MKT.hasOwnProperty(m)) computeBrag(PARTNERS_BY_MKT[m]);
+}
+function saveCache() {
+  return idbSet(CACHE_KEY, { ts: Date.now(), PROSPECTS: PROSPECTS, PARTNERS: PARTNERS, BILT: BILT, DINOVA: DINOVA, SCRIPTS: SCRIPTS });
+}
+function loadCache() {
+  return idbGet(CACHE_KEY).then(function(b) {
+    if (!b || !b.PROSPECTS || !b.PROSPECTS.length) return false;
+    PROSPECTS = b.PROSPECTS; PARTNERS = b.PARTNERS || []; BILT = b.BILT || {}; DINOVA = b.DINOVA || {}; SCRIPTS = b.SCRIPTS || {};
+    rebuildDerived();
+    return true;
+  });
+}
+function networkLoad() {
+  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadScriptsFromSheet()])
+    .then(function() { saveCache(); });
+}
+
 function afterAuth() {
   document.getElementById('g-signin-btn').style.display = 'none';
   document.getElementById('auth-error').style.display = 'none';
   document.getElementById('auth-loading').style.display = 'block';
-  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadScriptsFromSheet()]).then(function() {
+  function finishUI() {
     document.getElementById('user-email').textContent = userProfile.email;
     document.getElementById('signout-btn').style.display = 'inline-block';
     document.getElementById('auth-gate').style.display = 'none';
     document.body.classList.remove('locked');
-    initApp();
+  }
+  return loadCache().then(function(hit) {
+    if (hit) {
+      finishUI(); initApp();                              // instant from cache
+      networkLoad().then(function() { reindex(); }).catch(function(){}); // refresh in background
+      return;
+    }
+    return networkLoad().then(function() { finishUI(); initApp(); });
   });
 }
 
@@ -347,7 +403,7 @@ function signOut() {
   google.accounts.id.disableAutoSelect();
   clearStoredAuth();
   accessToken = null; userProfile = null;
-  location.reload();
+  idbDel(CACHE_KEY).then(function() { location.reload(); }, function() { location.reload(); });
 }
 
 function refreshAccessToken() {
@@ -583,12 +639,15 @@ function buildSlugs() {
   }
 }
 
-function initApp() {
+function reindex() {
   searchIndex.length = 0;
   for (var i = 0; i < PROSPECTS.length; i++) {
     searchIndex.push({ i: i, nl: PROSPECTS[i].name.toLowerCase() });
   }
   buildSlugs();
+}
+function initApp() {
+  reindex();
   document.getElementById('export-csv-btn').style.display = 'inline-block';
   // Deep link: if URL has ?r=<slug>, auto-load that restaurant
   var match = window.location.search.match(/[?&]r=([^&]+)/);
