@@ -482,6 +482,7 @@ function lookScore(a, p) {
 }
 function isFastCasual(x) { return (x.rtype || '').toLowerCase() === 'fast casual'; }
 function tierRank(t) { return t === 'National' ? 2 : (t === 'City' ? 1 : 0); }
+function isNamedropper(p) { return p.tier === 'Neighborhood' || p.tier === 'City' || p.tier === 'National'; }
 function computeND(a) {
   var accFC = isFastCasual(a);
   var pool = (PARTNERS_BY_MKT[a.market] || []).filter(function(p) {
@@ -503,16 +504,21 @@ function computeND(a) {
   var fa = cfam(a.cuisine);
   nd.topcuisine = pool.filter(function(p) { return a.cuisine && (p.cuisine.toLowerCase() === a.cuisine.toLowerCase() || cfam(p.cuisine) === fa); })
                       .sort(function(x, y) { return (tierRank(y.tier) - tierRank(x.tier)) || (y.brag - x.brag); }).slice(0, 5);
-  // BEST: (1) closest look-alike near them + (2) best same-cuisine namedropper citywide (any distance)
-  var la = pool.filter(function(p) { return p._l >= 0.35; });
+  // BEST: (1) closest look-alike near them + (2) best same-cuisine namedropper citywide.
+  // Both picks must be tagged namedroppers (Neighborhood / City / National).
+  var ndPool = pool.filter(isNamedropper);
+  var la = ndPool.filter(function(p) { return p._l >= 0.35; });
   var laPick = la.length ? la.reduce(function(m, p) { return p._d < m._d ? p : m; })
-                         : pool.slice().sort(function(x, y) { return (y._l - x._l) || (x._d - y._d); })[0];
-  var cityBest = nd.topcuisine[0] || nd.topcity[0] || null;
+                         : (ndPool.length ? ndPool.slice().sort(function(x, y) { return (y._l - x._l) || (x._d - y._d); })[0] : null);
+  var cityBest = null;
+  for (var ci = 0; ci < nd.topcuisine.length; ci++) { if (isNamedropper(nd.topcuisine[ci])) { cityBest = nd.topcuisine[ci]; break; } }
+  if (!cityBest) cityBest = nd.topcity[0] || null;
   var best = [];
   if (laPick) best.push(laPick);
   if (cityBest && !best.some(function(x){ return x.id === cityBest.id; })) best.push(cityBest);
-  for (var bi = 0; best.length < 2 && bi < byDist.length; bi++) {
-    var cand = byDist[bi];
+  var ndByDist = ndPool.slice().sort(function(x, y) { return x._d - y._d; });
+  for (var bi = 0; best.length < 2 && bi < ndByDist.length; bi++) {
+    var cand = ndByDist[bi];
     if (!best.some(function(x){ return x.id === cand.id; })) best.push(cand);
   }
   nd.best = best;
