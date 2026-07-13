@@ -607,12 +607,8 @@ function computeND(a) {
   var la = ndLocal.filter(function(p) { return p._l >= 0.35; });
   var laPick = la.length ? la.reduce(function(m, p) { return p._d < m._d ? p : m; })
                          : (ndLocal.length ? ndLocal.slice().sort(function(x, y) { return (y._l - x._l) || (x._d - y._d); })[0] : null);
-  // Best[1] = best same-cuisine namedropper, preferring the same borough, then citywide
-  function byTierBrag(x, y) { return (tierRank(y.tier) - tierRank(x.tier)) || (y.brag - x.brag); }
-  var cuisineND = pool.filter(function(p) { return isNamedropper(p) && a.cuisine && (p.cuisine.toLowerCase() === a.cuisine.toLowerCase() || cfam(p.cuisine) === fa); });
-  var cuisineLocal = cuisineND.filter(sameBoro);
-  var cityBest = cuisineLocal.length ? cuisineLocal.slice().sort(byTierBrag)[0]
-               : (cuisineND.length ? cuisineND.slice().sort(byTierBrag)[0] : (nd.topcity[0] || null));
+  // Best[1] = best same-cuisine namedropper citywide (any borough, any distance)
+  var cityBest = nd.topcuisine[0] || nd.topcity[0] || null;
   var best = [];
   if (laPick) best.push(laPick);
   if (cityBest && !best.some(function(x){ return x.id === cityBest.id; })) best.push(cityBest);
