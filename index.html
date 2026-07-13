@@ -499,15 +499,28 @@ function loadDinova() {
     }
   });
 }
+function getRowCount(name) {
+  var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + '?fields=sheets.properties(title,gridProperties/rowCount)';
+  function go() { return fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } }); }
+  return go().then(function(res) {
+    if (res.status === 401) return refreshAccessToken().then(function(t) { accessToken = t; return go(); });
+    return res;
+  }).then(function(res) { if (!res.ok) throw new Error('Sheets meta ' + res.status); return res.json(); })
+    .then(function(j) {
+      var arr = j.sheets || [];
+      for (var i = 0; i < arr.length; i++) if (arr[i].properties && arr[i].properties.title === name) return (arr[i].properties.gridProperties || {}).rowCount || 0;
+      return 0;
+    });
+}
 function loadAccounts() {
-  var CHUNK = 15000, MAXROWS = 150000;  // generous ceiling; empty chunks are ignored
-  return fetchSheetValues('Accounts!A1:P1').then(function(hrows) {
-    var H = colMap(hrows[0] || []);
-    var jobs = [];
-    for (var start = 2; start <= MAXROWS; start += CHUNK) {
-      (function(s) {
-        jobs.push(fetchSheetValues('Accounts!A' + s + ':P' + (s + CHUNK - 1)).then(function(v) { return { s: s, v: v }; }));
-      })(start);
+  var CHUNK = 15000;
+  return Promise.all([fetchSheetValues('Accounts!A1:P1'), getRowCount('Accounts')]).then(function(res) {
+    var H = colMap(res[0][0] || []); var rowCount = res[1] || 0; var jobs = [];
+    for (var start = 2; start <= rowCount; start += CHUNK) {
+      var end = Math.min(start + CHUNK - 1, rowCount);
+      (function(s, e) {
+        jobs.push(fetchSheetValues('Accounts!A' + s + ':P' + e).catch(function(){ return []; }).then(function(v) { return { s: s, v: v }; }));
+      })(start, end);
     }
     return Promise.all(jobs).then(function(results) {
       results.sort(function(a, b) { return a.s - b.s; });  // keep sheet order (stable slugs)
