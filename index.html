@@ -503,13 +503,19 @@ function computeND(a) {
   var fa = cfam(a.cuisine);
   nd.topcuisine = pool.filter(function(p) { return a.cuisine && (p.cuisine.toLowerCase() === a.cuisine.toLowerCase() || cfam(p.cuisine) === fa); })
                       .sort(function(x, y) { return (tierRank(y.tier) - tierRank(x.tier)) || (y.brag - x.brag); }).slice(0, 5);
-  // BEST (C): nearest true look-alike + 2 closest/most-impressive
+  // BEST: (1) closest look-alike near them + (2) best same-cuisine namedropper citywide (any distance)
   var la = pool.filter(function(p) { return p._l >= 0.35; });
   var laPick = la.length ? la.reduce(function(m, p) { return p._d < m._d ? p : m; })
                          : pool.slice().sort(function(x, y) { return (y._l - x._l) || (x._d - y._d); })[0];
-  var others = byDist.slice(0, 15).filter(function(p) { return p.id !== laPick.id; })
-    .sort(function(x, y) { return (0.5*(1/(1+y._d))+0.5*y.brag) - (0.5*(1/(1+x._d))+0.5*x.brag); }).slice(0, 2);
-  nd.best = [laPick].concat(others);
+  var cityBest = nd.topcuisine[0] || nd.topcity[0] || null;
+  var best = [];
+  if (laPick) best.push(laPick);
+  if (cityBest && !best.some(function(x){ return x.id === cityBest.id; })) best.push(cityBest);
+  for (var bi = 0; best.length < 2 && bi < byDist.length; bi++) {
+    var cand = byDist[bi];
+    if (!best.some(function(x){ return x.id === cand.id; })) best.push(cand);
+  }
+  nd.best = best;
   return nd;
 }
 
