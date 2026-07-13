@@ -213,12 +213,15 @@
 // as long as the page is served from an origin registered on that client
 // (e.g. https://opassafiume-coder.github.io). Swap if this app lives elsewhere.
 var OAUTH_CLIENT_ID = '352874229289-tglifiln7raionffiran3a63p6verre0.apps.googleusercontent.com';
-var SHEET_ID        = '16XqBrMG5-WD0DsAssMWoK8NZ0t2EFbWAa0bLBJO3DY8';
+var SHEET_ID        = '1y9Bl1FyVl7pLYcG4SfZWd2705iP6M0rO_efAzvp1uGs';
 var REQUIRED_HD     = 'seatedapp.io';
 var SCOPES          = 'https://www.googleapis.com/auth/spreadsheets.readonly';
-var PROSPECTS_RANGE = 'Prospects!A:P';
 
-var PROSPECTS = [];
+var PROSPECTS = [];        // accounts (the searchable universe)
+var PARTNERS = [];         // namedropper pool
+var PARTNERS_BY_MKT = {};  // market -> [partners]
+var BILT = {};             // market -> {lead, hoods, buildings, safe, sharp}
+var DINOVA = {};           // market -> {insert, show:[...]}
 var SCRIPTS = {};
 var tokenClient = null, accessToken = null, userProfile = null;
 
@@ -322,7 +325,7 @@ function afterAuth() {
   document.getElementById('g-signin-btn').style.display = 'none';
   document.getElementById('auth-error').style.display = 'none';
   document.getElementById('auth-loading').style.display = 'block';
-  return Promise.all([loadProspectsFromSheet(), loadScriptsFromSheet()]).then(function() {
+  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadScriptsFromSheet()]).then(function() {
     document.getElementById('user-email').textContent = userProfile.email;
     document.getElementById('signout-btn').style.display = 'inline-block';
     document.getElementById('auth-gate').style.display = 'none';
@@ -376,34 +379,128 @@ function fetchSheetValues(range) {
   }).then(function(data) { return data.values || []; });
 }
 
-function loadProspectsFromSheet() {
-  return fetchSheetValues(PROSPECTS_RANGE).then(function(values) {
-    if (!values.length) { PROSPECTS = []; return; }
-    var headers = values[0].map(function(h) { return String(h || '').trim(); });
-    var out = [];
-    for (var i = 1; i < values.length; i++) {
-      var row = values[i] || [];
-      var obj = {};
-      for (var c = 0; c < headers.length; c++) obj[headers[c]] = row[c] != null ? String(row[c]) : '';
-      if (!obj.name) continue;
-      out.push({
-        name: obj.name, address: obj.address, neighborhood: obj.neighborhood, zip: obj.zip,
-        cuisine: obj.cuisine, price: obj.price, accolades: obj.accolades, market: obj.market,
-        bilt_safe: obj.bilt_safe, mkt_year: obj.mkt_year, mkt_avg_rev: obj.mkt_avg_rev,
-        mkt_members: obj.mkt_members, mkt_volume: obj.mkt_volume,
-        partners: parseJsonCell(obj.partners_json),
-        bilt: parseJsonCell(obj.bilt_json),
-        dinova: parseJsonCell(obj.dinova_json)
+// ── Parsing helpers for the Namedroppers sheet ──
+function colMap(headerRow) { var m = {}; for (var i = 0; i < headerRow.length; i++) m[String(headerRow[i] || '').trim()] = i; return m; }
+function n2(x) { var v = parseFloat(x); return isNaN(v) ? null : v; }
+function cleanCuisine(x) { x = String(x || '').trim(); return (!x || /^[0-9.]+$/.test(x)) ? '' : x; }
+function priceLvl(x) { var v = parseFloat(x); return (!isNaN(v) && v >= 0 && v <= 4) ? Math.round(v) : null; }
+
+function parseRestaurant(row, H) {
+  function g(name) { var i = H[name]; return i == null ? '' : (row[i] != null ? String(row[i]) : ''); }
+  return {
+    id: g('Full Account ID'), name: g('Account Name'),
+    lat: n2(g('Latitude')), lon: n2(g('Longitude')),
+    address: g('Billing Address Line 1'), neighborhood: g('Neighborhood').trim(),
+    zip: g('Billing Zip/Postal Code'), market: g('Seated Market').trim(),
+    cuisine: cleanCuisine(g('Primary Cuisine')), btype: g('Business Type').trim(), rtype: g('Restaurant Type').trim(),
+    price: priceLvl(g('Google Price Level')), reviews: n2(g('# Google User Ratings')) || 0,
+    infat: (n2(g('In Infatuation?')) === 1) ? 1 : 0, mich: (n2(g('In Michelin Guide?')) === 1) ? 1 : 0,
+    michDetail: g('Michelin Detail'), gmv: n2(g('GMV (Last 30)')) || 0, tier: g('NameDropper').trim()
+  };
+}
+
+function loadPartners() {
+  return fetchSheetValues('Partners!A:S').then(function(vals) {
+    if (!vals.length) return;
+    var H = colMap(vals[0]); PARTNERS = []; PARTNERS_BY_MKT = {};
+    for (var i = 1; i < vals.length; i++) {
+      var p = parseRestaurant(vals[i], H);
+      if (!p.name || p.lat == null || p.lon == null) continue;
+      PARTNERS.push(p);
+      (PARTNERS_BY_MKT[p.market] = PARTNERS_BY_MKT[p.market] || []).push(p);
+    }
+    for (var m in PARTNERS_BY_MKT) if (PARTNERS_BY_MKT.hasOwnProperty(m)) computeBrag(PARTNERS_BY_MKT[m]);
+  });
+}
+function computeBrag(pool) {
+  function ranks(key) {
+    var vals = pool.map(function(p) { return p[key]; }).sort(function(a, b) { return a - b; });
+    var uniq = []; for (var i = 0; i < vals.length; i++) if (i === 0 || vals[i] !== vals[i-1]) uniq.push(vals[i]);
+    var idx = {}; for (var j = 0; j < uniq.length; j++) idx[uniq[j]] = uniq.length > 1 ? j/(uniq.length-1) : 0; return idx;
+  }
+  var gr = ranks('gmv'), rr = ranks('reviews');
+  for (var i = 0; i < pool.length; i++) { var p = pool[i];
+    var tw = ({National:1, City:0.6, Neighborhood:0.3})[p.tier] || 0;
+    p.brag = 0.45*gr[p.gmv] + 0.30*rr[p.reviews] + 0.15*p.mich + 0.07*p.infat + 0.03*tw;
+  }
+}
+function loadBILT() {
+  return fetchSheetValues('BILT!A:H').then(function(vals) {
+    if (!vals.length) return; var H = colMap(vals[0]);
+    for (var i = 1; i < vals.length; i++) { var r = vals[i]; var g = function(n){ var x=H[n]; return x==null?'':(r[x]!=null?String(r[x]):''); };
+      var m = g('Market').trim(); if (!m) continue;
+      BILT[m] = { lead:g('Lead Names (Bilt-confirmed)'), hoods:g('Anchor Neighborhoods'), buildings:g('Flagship / Anchor Buildings'), safe:g('SAFE Line (operator-only)'), sharp:g('SHARP Line (named hoods/buildings)') };
+    }
+  });
+}
+function loadDinova() {
+  return fetchSheetValues('Dinova!A:C').then(function(vals) {
+    if (!vals.length) return; var H = colMap(vals[0]);
+    for (var i = 1; i < vals.length; i++) { var r = vals[i]; var g = function(n){ var x=H[n]; return x==null?'':(r[x]!=null?String(r[x]):''); };
+      var m = g('Seated Market').trim(); if (!m) continue;
+      DINOVA[m] = { insert: g('To Insert in Script').trim(),
+                    show: g('To Show in Tab').split(',').map(function(s){return s.trim();}).filter(Boolean) };
+    }
+  });
+}
+function loadAccounts() {
+  var CHUNK = 20000;
+  return fetchSheetValues('Accounts!A1:P1').then(function(hrows) {
+    var H = colMap(hrows[0] || []);
+    PROSPECTS = [];
+    function grab(startRow) {
+      var endRow = startRow + CHUNK - 1;
+      return fetchSheetValues('Accounts!A' + startRow + ':P' + endRow).then(function(vals) {
+        for (var i = 0; i < vals.length; i++) {
+          var a = parseRestaurant(vals[i], H);
+          if (!a.name || a.lat == null || a.lon == null) continue;
+          PROSPECTS.push(a);
+        }
+        if (vals.length >= CHUNK) return grab(endRow + 1); // more rows remain
       });
     }
-    PROSPECTS = out;
+    return grab(2);
   });
 }
 
-function parseJsonCell(s) {
-  if (!s) return [];
-  try { var v = JSON.parse(s); return Array.isArray(v) ? v : []; }
-  catch (e) { return []; }
+// ── Namedropper matching engine (runs in-memory on account open) ──
+function havMi(a, b) {
+  var R = 3958.8, la1 = a.lat*Math.PI/180, la2 = b.lat*Math.PI/180;
+  var dla = la2 - la1, dlo = (b.lon - a.lon)*Math.PI/180;
+  var h = Math.sin(dla/2)*Math.sin(dla/2) + Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)*Math.sin(dlo/2);
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+var CFAM = {pizza:'italian',italian:'italian',trattoria:'italian',sushi:'japanese',japanese:'japanese',ramen:'japanese',izakaya:'japanese',mexican:'mexican',taqueria:'mexican',korean:'korean',mediterranean:'mediterranean',greek:'mediterranean',seafood:'seafood',american:'american',gastropub:'american',bar:'bar','cocktail lounge':'bar',bars:'bar',steakhouse:'steak',french:'french',thai:'thai',chinese:'chinese',indian:'indian'};
+function cfam(c) { c = String(c || '').toLowerCase(); return CFAM[c] || c; }
+function lookScore(a, p) {
+  var s = 0;
+  if (a.cuisine && p.cuisine) { if (a.cuisine.toLowerCase() === p.cuisine.toLowerCase()) s += 0.5; else if (cfam(a.cuisine) === cfam(p.cuisine)) s += 0.35; }
+  if (a.btype && p.btype && a.btype.toLowerCase() === p.btype.toLowerCase()) s += 0.15;
+  if (a.rtype && p.rtype && a.rtype.toLowerCase() === p.rtype.toLowerCase()) s += 0.15;
+  if (a.price != null && p.price != null) { var d = Math.abs(a.price - p.price); s += d===0?0.2:(d===1?0.1:0); }
+  return s;
+}
+function computeND(a) {
+  var pool = (PARTNERS_BY_MKT[a.market] || []).filter(function(p) { return p.id !== a.id; });
+  var nd = { best:[], nearest:[], lookalike:[], topcity:[], topcuisine:[],
+             bilt: BILT[a.market] || null, dinova: DINOVA[a.market] || null, cuisineLabel: a.cuisine || '' };
+  if (!pool.length) return nd;
+  for (var i = 0; i < pool.length; i++) { var p = pool[i]; p._d = havMi(a, p); p._l = lookScore(a, p); }
+  var byDist = pool.slice().sort(function(x, y) { return x._d - y._d; });
+  nd.nearest = byDist.slice(0, 5);
+  nd.lookalike = pool.slice().sort(function(x, y) { return (y._l - x._l) || (x._d - y._d); }).slice(0, 5);
+  nd.topcity = pool.slice().sort(function(x, y) { return y.brag - x.brag; }).slice(0, 5);
+  var fa = cfam(a.cuisine);
+  nd.topcuisine = pool.filter(function(p) { return a.cuisine && (p.cuisine.toLowerCase() === a.cuisine.toLowerCase() || cfam(p.cuisine) === fa); })
+                      .sort(function(x, y) { return y.brag - x.brag; }).slice(0, 5);
+  // BEST (C): nearest true look-alike + 2 closest/most-impressive
+  var la = pool.filter(function(p) { return p._l >= 0.35; });
+  var laPick = la.length ? la.reduce(function(m, p) { return p._d < m._d ? p : m; })
+                         : pool.slice().sort(function(x, y) { return (y._l - x._l) || (x._d - y._d); })[0];
+  var others = byDist.slice(0, 15).filter(function(p) { return p.id !== laPick.id; })
+    .sort(function(x, y) { return (0.5*(1/(1+y._d))+0.5*y.brag) - (0.5*(1/(1+x._d))+0.5*x.brag); }).slice(0, 2);
+  nd.best = [laPick].concat(others);
+  return nd;
 }
 
 function loadScriptsFromSheet() {
@@ -538,7 +635,8 @@ document.addEventListener('click', function(e) {
 
 function selectProspect(idx) {
   current = PROSPECTS[idx];
-  activeNDTab = 'partner';
+  current.nd = computeND(current);
+  activeNDTab = 'best';
   activeTopTab = 'opener';
   activeObjTab = 'obj0';
   dd.style.display = 'none';
@@ -602,44 +700,48 @@ function discRow(boldQ, tipA) {
     + '</div>';
 }
 
-function ndItem(dotClass, item) {
-  item = item || {};
-  var reviews = item.reviews || item.google_reviews || item.reviews_count || '';
+function dollar(n) { return (n == null) ? '' : ('$'.repeat(n) || '$?'); }
+function commas(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+function partnerRow(p, dotClass) {
   var badges = '';
-  if (item.price) badges += '<span class="nd-badge nd-badge-price">' + item.price + '</span>';
-  if (item.dist)  badges += '<span class="nd-badge nd-badge-dist">' + item.dist + '</span>';
-  if (item.gmv)   badges += '<span class="nd-badge nd-badge-gmv">' + item.gmv + '</span>';
-  if (reviews)    badges += '<span class="nd-badge nd-badge-rev">★ ' + reviews + '</span>';
-  if (item.tag)   badges += '<span class="nd-badge nd-badge-tag">' + item.tag + '</span>';
-  var sub = item.cuisine ? '<div class="nd-sub">' + item.cuisine + '</div>' : '';
+  if (p.price != null) badges += '<span class="nd-badge nd-badge-price">' + dollar(p.price) + '</span>';
+  if (p._d != null)    badges += '<span class="nd-badge nd-badge-dist">' + p._d.toFixed(1) + 'mi</span>';
+  if (p.gmv)           badges += '<span class="nd-badge nd-badge-gmv">$' + commas(p.gmv) + '/mo</span>';
+  if (p.reviews)       badges += '<span class="nd-badge nd-badge-rev">★ ' + commas(p.reviews) + '</span>';
+  if (p.mich)          badges += '<span class="nd-badge nd-badge-tag">MICHELIN</span>';
+  if (p.infat)         badges += '<span class="nd-badge nd-badge-tag">INFATUATION</span>';
+  var sub = p.cuisine ? '<div class="nd-sub">' + esc(p.cuisine) + '</div>' : '';
   return '<div class="nd-item"><div class="nd-dot ' + dotClass + '"></div>'
-    + '<div class="nd-body">'
-    + '<div class="nd-left"><div class="nd-name">' + item.name + '</div>' + sub + '</div>'
-    + '<div class="nd-meta">' + badges + '</div>'
-    + '</div></div>';
+    + '<div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(p.name) + '</div>' + sub + '</div>'
+    + '<div class="nd-meta">' + badges + '</div></div></div>';
 }
 
 function renderNDTab(p) {
-  var html = '';
-  if (activeNDTab === 'partner') {
-    var items = p.partners.filter(function(x) { return x && x.name; });
-    if (!items.length) return '<div class="nd-empty">No nearby partners found</div>';
-    for (var i = 0; i < items.length; i++) {
-      html += ndItem('dot-green', items[i]);
-    }
-  } else if (activeNDTab === 'bilt') {
-    var items = p.bilt.filter(function(x) { return x && x.name; });
-    if (!items.length) return '<div class="nd-empty">No BILT buildings mapped for this market</div>';
-    for (var i = 0; i < items.length; i++) {
-      html += ndItem('dot-purple', { name: items[i].name });
-    }
-  } else if (activeNDTab === 'dinova') {
-    var items = p.dinova.filter(function(x) { return x && x.name; });
-    if (!items.length) return '<div class="nd-empty">No Dinova companies for this market</div>';
-    for (var i = 0; i < items.length; i++) {
-      html += ndItem('dot-blue', { name: items[i].name });
-    }
+  var nd = p.nd || {};
+  var listMap = { best: nd.best, nearest: nd.nearest, lookalike: nd.lookalike, topcity: nd.topcity, topcuisine: nd.topcuisine };
+  var dotMap = { best:'dot-green', nearest:'dot-blue', lookalike:'dot-green', topcity:'dot-purple', topcuisine:'dot-green' };
+  if (activeNDTab === 'bilt') {
+    var b = nd.bilt;
+    if (!b) return '<div class="nd-empty">No BILT data for this market</div>';
+    var h = '';
+    if (b.lead)      h += '<div class="nd-item"><div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(b.lead) + '</div><div class="nd-sub">BILT-confirmed operators</div></div></div></div>';
+    if (b.hoods)     h += '<div class="nd-item"><div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(b.hoods) + '</div><div class="nd-sub">Anchor neighborhoods</div></div></div></div>';
+    if (b.buildings) h += '<div class="nd-item"><div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(b.buildings) + '</div><div class="nd-sub">Flagship buildings</div></div></div></div>';
+    if (b.safe)      h += '<div class="disc-a" style="padding:10px 12px">' + esc(b.safe) + '</div>';
+    return h || '<div class="nd-empty">No BILT data for this market</div>';
   }
+  if (activeNDTab === 'dinova') {
+    var d = nd.dinova;
+    if (!d || !d.show.length) return '<div class="nd-empty">No Dinova companies for this market</div>';
+    var hh = '';
+    for (var k = 0; k < d.show.length; k++) hh += '<div class="nd-item"><div class="nd-dot dot-blue"></div><div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(d.show[k]) + '</div></div></div></div>';
+    return hh;
+  }
+  var items = listMap[activeNDTab] || [];
+  if (!items.length) return '<div class="nd-empty">None found in this market</div>';
+  var html = '';
+  for (var i = 0; i < items.length; i++) html += partnerRow(items[i], dotMap[activeNDTab] || 'dot-green');
   return html;
 }
 
@@ -647,11 +749,10 @@ function render() {
   var p = current;
   if (!p) return;
 
-  var p1 = p.partners[0] || {}, p2 = p.partners[1] || {};
-  var p1n = p1.name || '', p2n = p2.name || '';
-  var b1 = p.bilt[0] || {}, b2 = p.bilt[1] || {}, b3 = p.bilt[2] || {};
-  var d1 = p.dinova[0] || {}, d2 = p.dinova[1] || {}, d3 = p.dinova[2] || {};
-  var d1n = d1.name || '', d2n = d2.name || '', d3n = d3.name || '';
+  var nd = p.nd || {};
+  var best = nd.best || [];
+  var p1n = (best[0] && best[0].name) || '';
+  var p2n = (best[1] && best[1].name) || '';
 
   // Sheet getter (Scripts tab value if present, else the built-in default) — no {token} fill
   function SG(key, def) {
@@ -659,17 +760,14 @@ function render() {
   }
 
   var nbhd = p.neighborhood || 'your neighborhood';
-  var accolPhrase = p.accolades
-    ? SG('accol_featured', "you’re featured in {accolades}").split('{accolades}').join(p.accolades)
+  var accolPhrase = p.mich ? SG('accol_michelin', "you’re in the Michelin Guide")
+    : p.infat ? SG('accol_infatuation', "you’re featured in The Infatuation")
     : SG('accol_default', "your Google reviews stood out");
-  var biltSafe = p.bilt_safe || '';
+  var biltSafe = (nd.bilt && nd.bilt.safe) || '';
 
-  var biltNames = [b1.name, b2.name, b3.name].filter(Boolean);
-  var dinovaNames = [d1n, d2n, d3n].filter(Boolean);
-  var dinPhrase = dinovaNames.length === 0 ? SG('din_phrase_none', "our corporate dining partners")
-    : dinovaNames.length === 1 ? dinovaNames[0]
-    : dinovaNames.length === 2 ? dinovaNames[0] + ' and ' + dinovaNames[1]
-    : dinovaNames[0] + ', ' + dinovaNames[1] + ', and ' + dinovaNames[2];
+  var biltNames = (nd.bilt && nd.bilt.lead) ? nd.bilt.lead.split(',').map(function(s){return s.trim();}).filter(Boolean) : [];
+  var dinovaNames = (nd.dinova && nd.dinova.show) ? nd.dinova.show : [];
+  var dinPhrase = dinovaNames.length ? dinovaNames.slice(0,3).join(', ') : SG('din_phrase_none', "our corporate dining partners");
 
   var scriptNotice = '<div class="script-notice">⚑ RED TEXT = DIRECTIONS — DO NOT READ ALOUD</div>';
 
@@ -679,7 +777,7 @@ function render() {
                         : SG('quantify_rest_default', "3,000 restaurants");
   var fb1 = p1n || SG('partner_fallback_1', "a similar local spot");
   var fb2 = p2n || SG('partner_fallback_2', "another local partner");
-  var dinOne = d1n || dinPhrase || "major corporate accounts";
+  var dinOne = (nd.dinova && nd.dinova.insert) || SG('din_phrase_none', "our corporate dining partners");
   var V = { name: p.name, nbhd: nbhd, p1: fb1, p2: fb2, dinOne: dinOne, restCount: restCount,
             biltSafe: biltSafe, dinPhrase: dinPhrase, accolPhrase: accolPhrase,
             partnerFallback: (p1n || SG('partner_fallback_objection', "our partner restaurants")) };
@@ -744,29 +842,21 @@ function render() {
   }
 
   // BUILD LEFT COLUMN
-  var ndCount = [p.partners.filter(function(x){return x&&x.name;}).length,
-                 p.bilt.filter(function(x){return x&&x.name;}).length,
-                 p.dinova.filter(function(x){return x&&x.name;}).length];
-
-  var mktCompact = [
-    (p.mkt_year ? 'Launched ' + p.mkt_year : ''),
-    (p.mkt_avg_rev ? 'Avg rev/restaurant ' + p.mkt_avg_rev : ''),
-    (p.mkt_members ? p.mkt_members + ' members' : ''),
-    (p.mkt_volume ? p.mkt_volume + ' monthly volume' : '')
-  ].filter(Boolean).join(' · ');
+  var infoLine = [ (p.reviews ? commas(p.reviews) + ' Google reviews' : ''), (p.market || '') ].filter(Boolean).join(' · ');
 
   var leftCol = ''
     + '<div class="card">'
     + '<div class="card-header">Restaurant Info</div>'
-    + '<div class="rest-banner"><div class="r-name">' + p.name + '</div>'
+    + '<div class="rest-banner"><div class="r-name">' + esc(p.name) + '</div>'
     + '<div class="r-chips">'
-    + (p.cuisine ? '<span class="chip chip-cuisine">' + p.cuisine + '</span>' : '')
-    + (p.price   ? '<span class="chip chip-price">' + p.price + '</span>' : '')
-    + (p.neighborhood ? '<span class="chip chip-nbhd">📍 ' + p.neighborhood + '</span>' : '')
-    + (p.market  ? '<span class="chip chip-market">' + p.market + '</span>' : '')
-    + (p.accolades ? '<span class="chip chip-acc">⭐ ' + p.accolades + '</span>' : '')
+    + (p.cuisine ? '<span class="chip chip-cuisine">' + esc(p.cuisine) + '</span>' : '')
+    + (p.price != null ? '<span class="chip chip-price">' + dollar(p.price) + '</span>' : '')
+    + (p.neighborhood ? '<span class="chip chip-nbhd">📍 ' + esc(p.neighborhood) + '</span>' : '')
+    + (p.market  ? '<span class="chip chip-market">' + esc(p.market) + '</span>' : '')
+    + (p.mich ? '<span class="chip chip-acc">⭐ Michelin' + (p.michDetail && !/^[0-9.]+$/.test(p.michDetail) ? ' · ' + esc(p.michDetail) : '') + '</span>' : '')
+    + (p.infat ? '<span class="chip chip-acc">⭐ The Infatuation</span>' : '')
     + '</div></div>'
-    + (mktCompact ? '<div class="mkt-compact">' + mktCompact + '</div>' : '')
+    + (infoLine ? '<div class="mkt-compact">' + esc(infoLine) + '</div>' : '')
     + '</div>'
 
     + '<div class="card" style="margin-top:12px">'
@@ -782,10 +872,14 @@ function render() {
   var rightCol = ''
     + '<div class="card">'
     + '<div class="card-header">Namedroppers</div>'
-    + '<div class="nd-tabs">'
-    + '<div class="nd-tab ' + (activeNDTab==='partner'?'active-partner':'') + '" onclick="setNDTab(\'partner\')">Partners (' + ndCount[0] + ')</div>'
-    + '<div class="nd-tab ' + (activeNDTab==='bilt'?'active-bilt':'') + '" onclick="setNDTab(\'bilt\')">BILT (' + ndCount[1] + ')</div>'
-    + '<div class="nd-tab ' + (activeNDTab==='dinova'?'active-dinova':'') + '" onclick="setNDTab(\'dinova\')">Dinova (' + ndCount[2] + ')</div>'
+    + '<div class="nd-tabs" style="flex-wrap:wrap">'
+    + ndTab('best', '⭐ Best')
+    + ndTab('nearest', '📍 Nearest')
+    + ndTab('lookalike', 'Look-alikes')
+    + ndTab('topcity', 'Top City')
+    + ndTab('topcuisine', 'Top ' + (nd.cuisineLabel || 'Cuisine'))
+    + ndTab('bilt', 'BILT')
+    + ndTab('dinova', 'Dinova')
     + '</div>'
     + '<div class="nd-items" id="nd-items">' + renderNDTab(p) + '</div>'
     + '</div>'
@@ -807,14 +901,16 @@ function render() {
   document.getElementById('search-hint').textContent = 'Showing: ' + p.name + (p.market ? ' · ' + p.market : '');
 }
 
+function ndTab(id, label) {
+  return '<div class="nd-tab ' + (activeNDTab === id ? 'active-partner' : '') + '" data-nd="' + id + '" onclick="setNDTab(\'' + id + '\')">' + label + '</div>';
+}
 function setNDTab(tab) {
   activeNDTab = tab;
   var el = document.getElementById('nd-items');
   if (el && current) el.innerHTML = renderNDTab(current);
   var tabs = document.querySelectorAll('.nd-tab');
-  var tabNames = ['partner','bilt','dinova'];
   for (var i = 0; i < tabs.length; i++) {
-    tabs[i].className = 'nd-tab' + (tab === tabNames[i] ? ' active-' + tabNames[i] : '');
+    tabs[i].classList.toggle('active-partner', tabs[i].getAttribute('data-nd') === tab);
   }
 }
 
