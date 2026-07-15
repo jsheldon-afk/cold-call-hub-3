@@ -222,6 +222,7 @@ var PARTNERS = [];         // namedropper pool
 var PARTNERS_BY_MKT = {};  // market -> [partners]
 var BILT = {};             // market -> {lead, hoods, buildings, safe, sharp}
 var DINOVA = {};           // market -> {insert, show:[...]}
+var MARKETS = {};          // market -> [{label, value}, ...] market stats
 var SCRIPTS = {};
 var tokenClient = null, accessToken = null, userProfile = null;
 
@@ -355,18 +356,18 @@ function rebuildDerived() {
   for (var m in PARTNERS_BY_MKT) if (PARTNERS_BY_MKT.hasOwnProperty(m)) computeBrag(PARTNERS_BY_MKT[m]);
 }
 function saveCache() {
-  return idbSet(CACHE_KEY, { ts: Date.now(), PROSPECTS: PROSPECTS, PARTNERS: PARTNERS, BILT: BILT, DINOVA: DINOVA, SCRIPTS: SCRIPTS });
+  return idbSet(CACHE_KEY, { ts: Date.now(), PROSPECTS: PROSPECTS, PARTNERS: PARTNERS, BILT: BILT, DINOVA: DINOVA, MARKETS: MARKETS, SCRIPTS: SCRIPTS });
 }
 function loadCache() {
   return idbGet(CACHE_KEY).then(function(b) {
     if (!b || !b.PROSPECTS || !b.PROSPECTS.length) return false;
-    PROSPECTS = b.PROSPECTS; PARTNERS = b.PARTNERS || []; BILT = b.BILT || {}; DINOVA = b.DINOVA || {}; SCRIPTS = b.SCRIPTS || {};
+    PROSPECTS = b.PROSPECTS; PARTNERS = b.PARTNERS || []; BILT = b.BILT || {}; DINOVA = b.DINOVA || {}; MARKETS = b.MARKETS || {}; SCRIPTS = b.SCRIPTS || {};
     rebuildDerived();
     return true;
   });
 }
 function networkLoad() {
-  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadScriptsFromSheet()])
+  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadMarkets(), loadScriptsFromSheet()])
     .then(function() { saveCache(); });
 }
 
@@ -486,6 +487,26 @@ function loadBILT() {
     for (var i = 1; i < vals.length; i++) { var r = vals[i]; var g = function(n){ var x=H[n]; return x==null?'':(r[x]!=null?String(r[x]):''); };
       var m = g('Market').trim(); if (!m) continue;
       BILT[m] = { lead:g('Lead Names (Bilt-confirmed)'), hoods:g('Anchor Neighborhoods'), buildings:g('Flagship / Anchor Buildings'), safe:g('SAFE Line (operator-only)'), sharp:g('SHARP Line (named hoods/buildings)') };
+    }
+  });
+}
+function loadMarkets() {
+  return fetchSheetValues('Markets!A:Z').catch(function(){ return []; }).then(function(vals) {
+    MARKETS = {};
+    if (!vals.length) return;
+    var hdr = vals[0].map(function(h){ return String(h || '').trim(); });
+    var mi = 0;
+    for (var c = 0; c < hdr.length; c++) { if (/market/i.test(hdr[c])) { mi = c; break; } }
+    for (var i = 1; i < vals.length; i++) {
+      var row = vals[i] || []; var m = String(row[mi] != null ? row[mi] : '').trim();
+      if (!m) continue;
+      var stats = [];
+      for (var c2 = 0; c2 < hdr.length; c2++) {
+        if (c2 === mi || !hdr[c2]) continue;
+        var v = row[c2]; if (v == null || String(v).trim() === '') continue;
+        stats.push({ label: hdr[c2], value: String(v) });
+      }
+      MARKETS[m] = stats;
     }
   });
 }
@@ -978,6 +999,13 @@ function render() {
     + (p.infat ? '<span class="chip chip-acc">⭐ The Infatuation</span>' : '')
     + '</div></div>'
     + (infoLine ? '<div class="mkt-compact">' + esc(infoLine) + '</div>' : '')
+    + (function(){
+        var stats = MARKETS[p.market] || [];
+        if (!stats.length) return '';
+        var h = '<div class="mkt-subhdr">' + esc(p.market) + ' Market</div>';
+        for (var i = 0; i < stats.length; i++) h += infoRow(esc(stats[i].label), esc(stats[i].value), true);
+        return h;
+      })()
     + '</div>'
 
     + '<div class="card" style="margin-top:12px">'
