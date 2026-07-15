@@ -43,7 +43,7 @@
   .d-chips { display:flex; gap:4px; margin-top:3px; flex-wrap:wrap; }
 
   /* LAYOUT */
-  .main { max-width:1200px; margin:0 auto; padding:20px 24px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .main { max-width:1600px; margin:0 auto; padding:20px 24px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   @media(max-width:900px){ .main { grid-template-columns:1fr; } }
 
   /* CARDS */
@@ -354,6 +354,7 @@ function rebuildDerived() {
   PARTNERS_BY_MKT = {};
   for (var i = 0; i < PARTNERS.length; i++) { var p = PARTNERS[i]; (PARTNERS_BY_MKT[p.market] = PARTNERS_BY_MKT[p.market] || []).push(p); }
   for (var m in PARTNERS_BY_MKT) if (PARTNERS_BY_MKT.hasOwnProperty(m)) computeBrag(PARTNERS_BY_MKT[m]);
+  buildPartnerNameIndex();
 }
 function saveCache() {
   return idbSet(CACHE_KEY, { ts: Date.now(), PROSPECTS: PROSPECTS, PARTNERS: PARTNERS, BILT: BILT, DINOVA: DINOVA, MARKETS: MARKETS, SCRIPTS: SCRIPTS });
@@ -467,7 +468,13 @@ function loadPartners() {
       (PARTNERS_BY_MKT[p.market] = PARTNERS_BY_MKT[p.market] || []).push(p);
     }
     for (var m in PARTNERS_BY_MKT) if (PARTNERS_BY_MKT.hasOwnProperty(m)) computeBrag(PARTNERS_BY_MKT[m]);
+    buildPartnerNameIndex();
   });
+}
+var PARTNERS_BY_NAME = {};
+function buildPartnerNameIndex() {
+  PARTNERS_BY_NAME = {};
+  for (var i = 0; i < PARTNERS.length; i++) { var p = PARTNERS[i]; if (p.name) PARTNERS_BY_NAME[p.name.trim().toLowerCase()] = p; }
 }
 function computeBrag(pool) {
   function ranks(key) {
@@ -490,23 +497,38 @@ function loadBILT() {
     }
   });
 }
+function splitTopLevel(s) {  // split on commas that are NOT inside parentheses
+  var out = [], depth = 0, cur = '';
+  s = String(s || '');
+  for (var i = 0; i < s.length; i++) {
+    var c = s[i];
+    if (c === '(') depth++;
+    else if (c === ')') depth = Math.max(0, depth - 1);
+    if (c === ',' && depth === 0) { if (cur.trim()) out.push(cur.trim()); cur = ''; }
+    else cur += c;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
 function loadMarkets() {
   return fetchSheetValues('Markets!A:Z').catch(function(){ return []; }).then(function(vals) {
     MARKETS = {};
     if (!vals.length) return;
     var hdr = vals[0].map(function(h){ return String(h || '').trim(); });
-    var mi = 0;
+    var mi = 0, ndi = -1;
     for (var c = 0; c < hdr.length; c++) { if (/market/i.test(hdr[c])) { mi = c; break; } }
+    for (var c3 = 0; c3 < hdr.length; c3++) { if (/namedropper/i.test(hdr[c3])) { ndi = c3; break; } }
     for (var i = 1; i < vals.length; i++) {
       var row = vals[i] || []; var m = String(row[mi] != null ? row[mi] : '').trim();
       if (!m) continue;
       var stats = [];
       for (var c2 = 0; c2 < hdr.length; c2++) {
-        if (c2 === mi || !hdr[c2]) continue;
+        if (c2 === mi || c2 === ndi || !hdr[c2]) continue;
         var v = row[c2]; if (v == null || String(v).trim() === '') continue;
         stats.push({ label: hdr[c2], value: String(v) });
       }
-      MARKETS[m] = stats;
+      var topcity = ndi >= 0 ? splitTopLevel(row[ndi]) : [];
+      MARKETS[m] = { stats: stats, topcity: topcity };
     }
   });
 }
@@ -603,7 +625,8 @@ function computeND(a) {
     return true;
   });
   var nd = { best:[], nearest:[], lookalike:[], topcity:[], topcuisine:[],
-             bilt: BILT[a.market] || null, dinova: DINOVA[a.market] || null, cuisineLabel: a.cuisine || '' };
+             bilt: BILT[a.market] || null, dinova: DINOVA[a.market] || null, cuisineLabel: a.cuisine || '',
+             marketTopcity: (MARKETS[a.market] && MARKETS[a.market].topcity) || [] };
   if (!pool.length) return nd;
   for (var i = 0; i < pool.length; i++) { var p = pool[i]; p._d = havMi(a, p); p._l = lookScore(a, p); }
   // Same-borough preference for distance-based picks (NYC etc.), fallback to whole market
@@ -880,6 +903,22 @@ function renderNDTab(p) {
     for (var k = 0; k < d.show.length; k++) hh += '<div class="nd-item"><div class="nd-dot dot-blue"></div><div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(d.show[k]) + '</div></div></div></div>';
     return hh;
   }
+  // Top City: use the market's curated namedropper list when present (match to a partner for Google info, else name-only)
+  if (activeNDTab === 'topcity' && nd.marketTopcity && nd.marketTopcity.length) {
+    var hc = '';
+    for (var ti = 0; ti < nd.marketTopcity.length; ti++) {
+      var nm = nd.marketTopcity[ti];
+      var match = PARTNERS_BY_NAME[nm.trim().toLowerCase()];
+      if (match) {
+        var mp = {}; for (var kk in match) mp[kk] = match[kk];
+        mp._d = havMi(p, match);
+        hc += partnerRow(mp, 'dot-purple');
+      } else {
+        hc += '<div class="nd-item"><div class="nd-dot dot-purple"></div><div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(nm) + '</div></div></div></div>';
+      }
+    }
+    return hc;
+  }
   var items = listMap[activeNDTab] || [];
   if (!items.length) return '<div class="nd-empty">None found in this market</div>';
   var html = '';
@@ -1000,7 +1039,7 @@ function render() {
     + '</div></div>'
     + (infoLine ? '<div class="mkt-compact">' + esc(infoLine) + '</div>' : '')
     + (function(){
-        var stats = MARKETS[p.market] || [];
+        var stats = (MARKETS[p.market] && MARKETS[p.market].stats) || [];
         if (!stats.length) return '';
         var h = '<div class="mkt-subhdr">' + esc(p.market) + ' Market</div>';
         for (var i = 0; i < stats.length; i++) h += infoRow(esc(stats[i].label), esc(stats[i].value), true);
