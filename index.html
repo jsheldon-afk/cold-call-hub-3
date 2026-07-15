@@ -1041,9 +1041,8 @@ function render() {
     + (function(){
         var stats = (MARKETS[p.market] && MARKETS[p.market].stats) || [];
         if (!stats.length) return '';
-        var h = '<div class="mkt-subhdr">' + esc(p.market) + ' Market</div>';
-        for (var i = 0; i < stats.length; i++) h += infoRow(esc(stats[i].label), esc(stats[i].value), true);
-        return h;
+        var parts = stats.map(function(s){ return '<b>' + esc(s.value) + '</b> ' + esc(s.label); });
+        return '<div class="mkt-compact">' + esc(p.market) + ' market: ' + parts.join(' · ') + '</div>';
       })()
     + '</div>'
 
