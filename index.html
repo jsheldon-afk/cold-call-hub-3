@@ -168,6 +168,20 @@
   .signout-btn { background:var(--blue-lt); color:var(--blue); border:1px solid var(--border); border-radius:5px; font-size:11px; font-weight:600; padding:5px 10px; cursor:pointer; }
   .signout-btn:hover { background:#DCEBFB; }
   body.locked .topbar, body.locked .search-bar, body.locked .main { filter:blur(4px); pointer-events:none; user-select:none; }
+
+  /* MANUAL MATCH MODAL */
+  #manual-modal { position:fixed; inset:0; background:rgba(0,0,0,0.35); z-index:500; display:none; align-items:center; justify-content:center; padding:16px; }
+  #manual-modal .m-card { background:var(--white); border:1px solid var(--border); border-radius:12px; padding:24px; max-width:400px; width:100%; box-shadow:0 8px 24px rgba(0,0,0,0.15); }
+  #manual-modal h2 { font-size:16px; color:var(--blue); margin-bottom:4px; }
+  #manual-modal .m-intro { font-size:12px; color:var(--muted); margin-bottom:16px; line-height:1.5; }
+  .m-field { margin-bottom:12px; }
+  .m-field label { display:block; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.04em; color:var(--muted); margin-bottom:4px; }
+  .m-field input, .m-field select { width:100%; padding:8px 10px; font-size:14px; border:1.5px solid var(--border); border-radius:8px; background:var(--bg); outline:none; }
+  .m-field input:focus, .m-field select:focus { border-color:var(--blue); background:var(--white); }
+  .m-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
+  .m-btn { padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--bg); color:var(--text); }
+  .m-btn.primary { background:var(--blue); color:var(--white); border-color:var(--blue); }
+  #m-error { display:none; background:#FCEBEB; color:#A32D2D; border-radius:6px; padding:8px 12px; font-size:12px; margin-top:4px; line-height:1.5; }
 </style>
 </head>
 <body class="locked">
@@ -194,6 +208,7 @@
   <div class="search-actions">
     <span id="mkt-label" style="font-size:11px; color:var(--muted);"></span>
     <span id="user-email" style="font-size:11px; color:var(--muted);"></span>
+    <button id="manual-btn" class="signout-btn" style="display:none;" onclick="openManual()">✏️ Not in list?</button>
     <button id="export-csv-btn" class="signout-btn" style="display:none;" onclick="exportUrlsCsv()">⬇ Export URLs CSV</button>
     <button id="signout-btn" class="signout-btn" style="display:none;" onclick="signOut()">Sign out</button>
   </div>
@@ -204,6 +219,42 @@
     <div class="e-icon">📵</div>
     <h2>Search a restaurant to get started</h2>
     <p>Type any prospect name above. You'll get their info, match signals, namedroppers, and a full personalized script.</p>
+  </div>
+</div>
+
+<datalist id="cuisine-list"></datalist>
+
+<div id="manual-modal">
+  <div class="m-card">
+    <h2>Restaurant not in the list?</h2>
+    <p class="m-intro">Enter the basics and we'll pull namedroppers for that area. Distances are approximate (based on the ZIP).</p>
+    <div class="m-field">
+      <label for="m-name">Restaurant name <span style="text-transform:none;font-weight:400;">(optional)</span></label>
+      <input type="text" id="m-name" placeholder="e.g. Joe's Trattoria" autocomplete="off" />
+    </div>
+    <div class="m-field">
+      <label for="m-zip">ZIP code</label>
+      <input type="text" id="m-zip" placeholder="e.g. 10013" inputmode="numeric" autocomplete="off" />
+    </div>
+    <div class="m-field">
+      <label for="m-cuisine">Cuisine</label>
+      <input type="text" id="m-cuisine" list="cuisine-list" placeholder="e.g. Italian" autocomplete="off" />
+    </div>
+    <div class="m-field">
+      <label for="m-price">Price point</label>
+      <select id="m-price">
+        <option value="">— select —</option>
+        <option value="1">$ · Budget</option>
+        <option value="2">$$ · Moderate</option>
+        <option value="3">$$$ · Upscale</option>
+        <option value="4">$$$$ · Fine dining</option>
+      </select>
+    </div>
+    <div id="m-error"></div>
+    <div class="m-actions">
+      <button class="m-btn" onclick="closeManual()">Cancel</button>
+      <button class="m-btn primary" onclick="runManual()">Get namedroppers</button>
+    </div>
   </div>
 </div>
 
@@ -724,10 +775,13 @@ function reindex() {
     searchIndex.push({ i: i, nl: PROSPECTS[i].name.toLowerCase() });
   }
   buildSlugs();
+  buildCuisineList();
 }
 function initApp() {
   reindex();
+  buildCuisineList();
   document.getElementById('export-csv-btn').style.display = 'inline-block';
+  document.getElementById('manual-btn').style.display = 'inline-block';
   // Deep link: if URL has ?r=<slug>, auto-load that restaurant
   var match = window.location.search.match(/[?&]r=([^&]+)/);
   if (match) {
@@ -761,6 +815,82 @@ function exportUrlsCsv() {
 
 window.signOut = signOut;
 window.exportUrlsCsv = exportUrlsCsv;
+
+// ── Manual match (restaurant not in the database) ──
+// Derive approximate coords + market for a ZIP by averaging the lat/lon of
+// known accounts/partners that share the ZIP (falling back to ZIP prefix).
+function zipCentroid(zip) {
+  var z5 = String(zip == null ? '' : zip).replace(/[^0-9]/g, '').slice(0, 5);
+  if (z5.length < 3) return null;
+  var pools = [PROSPECTS, PARTNERS];
+  function scan(len) {
+    var pfx = z5.slice(0, len), sLat = 0, sLon = 0, n = 0, mkt = {};
+    for (var pi = 0; pi < pools.length; pi++) {
+      var arr = pools[pi];
+      for (var i = 0; i < arr.length; i++) {
+        var r = arr[i];
+        if (r.lat == null || r.lon == null) continue;
+        var rz = String(r.zip == null ? '' : r.zip).replace(/[^0-9]/g, '').slice(0, 5);
+        if (rz.length >= len && rz.slice(0, len) === pfx) {
+          sLat += r.lat; sLon += r.lon; n++;
+          if (r.market) mkt[r.market] = (mkt[r.market] || 0) + 1;
+        }
+      }
+    }
+    if (!n) return null;
+    var bm = '', bc = -1;
+    for (var m in mkt) if (mkt.hasOwnProperty(m) && mkt[m] > bc) { bc = mkt[m]; bm = m; }
+    return { lat: sLat / n, lon: sLon / n, market: bm, n: n, exact: len === 5 };
+  }
+  return scan(5) || scan(4) || scan(3);
+}
+
+function buildCuisineList() {
+  var seen = {}, out = [];
+  function add(arr) { for (var i = 0; i < arr.length; i++) { var c = arr[i].cuisine; if (c && !seen[c.toLowerCase()]) { seen[c.toLowerCase()] = 1; out.push(c); } } }
+  add(PARTNERS); add(PROSPECTS);
+  out.sort();
+  var dl = document.getElementById('cuisine-list');
+  if (dl) dl.innerHTML = out.map(function(c) { return '<option value="' + esc(c) + '"></option>'; }).join('');
+}
+
+function openManual() {
+  document.getElementById('m-error').style.display = 'none';
+  document.getElementById('manual-modal').style.display = 'flex';
+  document.getElementById('m-zip').focus();
+}
+function closeManual() { document.getElementById('manual-modal').style.display = 'none'; }
+
+function runManual() {
+  var zip = document.getElementById('m-zip').value.trim();
+  var cuisine = document.getElementById('m-cuisine').value.trim();
+  var priceSel = document.getElementById('m-price').value;
+  var nameVal = document.getElementById('m-name').value.trim();
+  var errEl = document.getElementById('m-error');
+  if (!zip) { errEl.textContent = 'Enter a ZIP code.'; errEl.style.display = 'block'; return; }
+  var cen = zipCentroid(zip);
+  if (!cen) { errEl.textContent = 'No restaurants found near ZIP ' + zip + '. Double-check the code or try a nearby ZIP.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  var a = {
+    id: '__manual__', name: nameVal || 'This restaurant',
+    lat: cen.lat, lon: cen.lon, address: '', neighborhood: '',
+    zip: zip, market: cen.market, cuisine: cuisine, btype: '', rtype: '',
+    price: priceSel ? parseInt(priceSel, 10) : null,
+    reviews: 0, infat: 0, mich: 0, michDetail: '', gmv: 0, tier: '', manual: true
+  };
+  current = a;
+  a.nd = computeND(a);
+  activeNDTab = 'best'; activeTopTab = 'opener'; activeObjTab = 'obj0';
+  closeManual();
+  input.value = a.name;
+  document.getElementById('mkt-label').textContent = a.market || '';
+  if (window.history && window.history.replaceState) window.history.replaceState(null, '', window.location.pathname);
+  render();
+}
+
+window.openManual = openManual;
+window.closeManual = closeManual;
+window.runManual = runManual;
 
 function showDropdown(q) {
   var results = [];
@@ -797,6 +927,17 @@ input.addEventListener('input', function() { showDropdown(input.value.trim().toL
 document.addEventListener('click', function(e) {
   if (!document.getElementById('search-wrap').contains(e.target)) dd.style.display = 'none';
 });
+
+// Manual-match modal: Enter submits, Esc closes, click backdrop closes
+(function() {
+  var modal = document.getElementById('manual-modal');
+  ['m-zip','m-cuisine','m-name'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', function(ev) { if (ev.key === 'Enter') { ev.preventDefault(); runManual(); } });
+  });
+  document.addEventListener('keydown', function(ev) { if (ev.key === 'Escape' && modal.style.display === 'flex') closeManual(); });
+  modal.addEventListener('click', function(ev) { if (ev.target === modal) closeManual(); });
+})();
 
 function selectProspect(idx) {
   current = PROSPECTS[idx];
@@ -1037,6 +1178,7 @@ function render() {
     + (p.mich ? '<span class="chip chip-acc">⭐ Michelin' + (p.michDetail && !/^[0-9.]+$/.test(p.michDetail) ? ' · ' + esc(p.michDetail) : '') + '</span>' : '')
     + (p.infat ? '<span class="chip chip-acc">⭐ The Infatuation</span>' : '')
     + '</div></div>'
+    + (p.manual ? '<div class="mkt-compact" style="color:var(--orange);background:var(--orange-lt);">✏️ Manual match · ZIP ' + esc(p.zip) + (p.market ? ' · ' + esc(p.market) : '') + ' — namedroppers & distances are approximate for the area.</div>' : '')
     + (infoLine ? '<div class="mkt-compact">' + esc(infoLine) + '</div>' : '')
     + (function(){
         var stats = (MARKETS[p.market] && MARKETS[p.market].stats) || [];
