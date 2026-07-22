@@ -96,8 +96,8 @@
   .nd-badge-dist   { background:#F0F0F0; color:#555; }
   .nd-badge-gmv    { background:#E6F7EE; color:#0A5E36; }
   .nd-badge-tag    { background:#FFF3E0; color:#E65100; }
-  .nd-glink        { background:var(--blue-lt); color:var(--blue); text-decoration:none; cursor:pointer; }
-  .nd-glink:hover  { background:#DCEBFB; text-decoration:underline; }
+  .chip-glink      { background:var(--blue); color:var(--white); text-decoration:none; cursor:pointer; }
+  .chip-glink:hover{ background:#124a82; }
   .nd-empty { padding:14px 12px; color:var(--muted); font-style:italic; font-size:12px; text-align:center; }
 
   /* MATCH SIGNALS */
@@ -1037,11 +1037,9 @@ function partnerRow(p, dotClass) {
   if (p.mich)          badges += '<span class="nd-badge nd-badge-tag">MICHELIN</span>';
   if (p.infat)         badges += '<span class="nd-badge nd-badge-tag">INFATUATION</span>';
   var sub = p.cuisine ? '<div class="nd-sub">' + esc(p.cuisine) + '</div>' : '';
-  var gq = encodeURIComponent((p.name || '') + (p.zip ? ' ' + p.zip : (p.market ? ' ' + p.market : '')));
-  var glink = '<a class="nd-badge nd-glink" href="https://www.google.com/search?q=' + gq + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">G/ZIP</a>';
   return '<div class="nd-item"><div class="nd-dot ' + dotClass + '"></div>'
     + '<div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(p.name) + '</div>' + sub + '</div>'
-    + '<div class="nd-meta">' + glink + badges + '</div></div></div>';
+    + '<div class="nd-meta">' + badges + '</div></div></div>';
 }
 
 function renderNDTab(p) {
@@ -1076,9 +1074,7 @@ function renderNDTab(p) {
         mp._d = havMi(p, match);
         hc += partnerRow(mp, 'dot-purple');
       } else {
-        var gq2 = encodeURIComponent(nm + (p.market ? ' ' + p.market : ''));
-        var gl2 = '<a class="nd-badge nd-glink" href="https://www.google.com/search?q=' + gq2 + '" target="_blank" rel="noopener" title="Google this restaurant">G/ZIP</a>';
-        hc += '<div class="nd-item"><div class="nd-dot dot-purple"></div><div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(nm) + '</div></div><div class="nd-meta">' + gl2 + '</div></div></div>';
+        hc += '<div class="nd-item"><div class="nd-dot dot-purple"></div><div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(nm) + '</div></div></div></div>';
       }
     }
     return hc;
@@ -1200,6 +1196,7 @@ function render() {
     + (p.market  ? '<span class="chip chip-market">' + esc(p.market) + '</span>' : '')
     + (p.mich ? '<span class="chip chip-acc">⭐ Michelin' + (p.michDetail && !/^[0-9.]+$/.test(p.michDetail) ? ' · ' + esc(p.michDetail) : '') + '</span>' : '')
     + (p.infat ? '<span class="chip chip-acc">⭐ The Infatuation</span>' : '')
+    + (function(){ var gq = encodeURIComponent((p.name || '') + (p.zip ? ' ' + p.zip : (p.market ? ' ' + p.market : ''))); return '<a class="chip chip-glink" href="https://www.google.com/search?q=' + gq + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 G/ZIP</a>'; })()
     + '</div></div>'
     + (p.manual ? '<div class="mkt-compact" style="color:var(--orange);background:var(--orange-lt);">✏️ Manual match · ZIP ' + esc(p.zip) + (p.market ? ' · ' + esc(p.market) : '') + ' — namedroppers & distances are approximate for the area.</div>' : '')
     + (infoLine ? '<div class="mkt-compact">' + esc(infoLine) + '</div>' : '')
