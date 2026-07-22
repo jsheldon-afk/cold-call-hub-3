@@ -98,7 +98,7 @@
   .nd-badge-tag    { background:#FFF3E0; color:#E65100; }
   .chip-glink      { background:var(--blue); color:var(--white); text-decoration:none; cursor:pointer; }
   .chip-glink:hover{ background:#124a82; }
-  .nd-glink        { background:var(--blue-lt); color:var(--blue); text-decoration:none; cursor:pointer; }
+  .nd-glink        { display:inline-block; margin-top:2px; background:var(--blue-lt); color:var(--blue); font-weight:700; text-decoration:none; cursor:pointer; padding:1px 7px; border-radius:4px; font-size:10px; }
   .nd-glink:hover  { background:#DCEBFB; text-decoration:underline; }
   .nd-empty { padding:14px 12px; color:var(--muted); font-style:italic; font-size:12px; text-align:center; }
 
@@ -1038,12 +1038,12 @@ function partnerRow(p, dotClass) {
   if (p.reviews)       badges += '<span class="nd-badge nd-badge-rev">★ ' + commas(p.reviews) + '</span>';
   if (p.mich)          badges += '<span class="nd-badge nd-badge-tag">MICHELIN</span>';
   if (p.infat)         badges += '<span class="nd-badge nd-badge-tag">INFATUATION</span>';
-  var sub = p.cuisine ? '<div class="nd-sub">' + esc(p.cuisine) + '</div>' : '';
   var gq = encodeURIComponent((p.name || '') + (p.zip ? ' ' + p.zip : (p.market ? ' ' + p.market : '')));
-  var glink = '<a class="nd-badge nd-glink" href="https://www.google.com/search?q=' + gq + '" target="_blank" rel="noopener" title="Google this restaurant for its info tile">G/ZIP</a>';
+  var glink = '<a class="nd-glink" href="https://www.google.com/search?q=' + gq + '" target="_blank" rel="noopener" title="Google this restaurant for its info tile">🔎 G/ZIP</a>';
+  var sub = '<div class="nd-sub">' + (p.cuisine ? esc(p.cuisine) + ' · ' : '') + glink + '</div>';
   return '<div class="nd-item"><div class="nd-dot ' + dotClass + '"></div>'
     + '<div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(p.name) + '</div>' + sub + '</div>'
-    + '<div class="nd-meta">' + glink + badges + '</div></div></div>';
+    + '<div class="nd-meta">' + badges + '</div></div></div>';
 }
 
 function renderNDTab(p) {
@@ -1079,8 +1079,8 @@ function renderNDTab(p) {
         hc += partnerRow(mp, 'dot-purple');
       } else {
         var gq2 = encodeURIComponent(nm + (p.market ? ' ' + p.market : ''));
-        var gl2 = '<a class="nd-badge nd-glink" href="https://www.google.com/search?q=' + gq2 + '" target="_blank" rel="noopener" title="Google this restaurant">G/ZIP</a>';
-        hc += '<div class="nd-item"><div class="nd-dot dot-purple"></div><div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(nm) + '</div></div><div class="nd-meta">' + gl2 + '</div></div></div>';
+        var gl2 = '<a class="nd-glink" href="https://www.google.com/search?q=' + gq2 + '" target="_blank" rel="noopener" title="Google this restaurant">🔎 G/ZIP</a>';
+        hc += '<div class="nd-item"><div class="nd-dot dot-purple"></div><div class="nd-body"><div class="nd-left"><div class="nd-name">' + esc(nm) + '</div><div class="nd-sub">' + gl2 + '</div></div></div></div>';
       }
     }
     return hc;
