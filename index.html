@@ -819,28 +819,45 @@ window.exportUrlsCsv = exportUrlsCsv;
 // ── Manual match (restaurant not in the database) ──
 // Derive approximate coords + market for a ZIP by averaging the lat/lon of
 // known accounts/partners that share the ZIP (falling back to ZIP prefix).
+function median(arr) {
+  if (!arr.length) return null;
+  var a = arr.slice().sort(function(x, y) { return x - y; }), n = a.length;
+  return n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2;
+}
 function zipCentroid(zip) {
   var z5 = String(zip == null ? '' : zip).replace(/[^0-9]/g, '').slice(0, 5);
   if (z5.length < 3) return null;
   var pools = [PROSPECTS, PARTNERS];
   function scan(len) {
-    var pfx = z5.slice(0, len), sLat = 0, sLon = 0, n = 0, mkt = {};
+    var pfx = z5.slice(0, len), lats = [], lons = [], mkt = {};
     for (var pi = 0; pi < pools.length; pi++) {
       var arr = pools[pi];
       for (var i = 0; i < arr.length; i++) {
         var r = arr[i];
-        if (r.lat == null || r.lon == null) continue;
+        if (r.lat == null || r.lon == null || !isFinite(r.lat) || !isFinite(r.lon)) continue;
+        // drop obviously bad geocodes (null island / out of North America)
+        if (Math.abs(r.lat) < 0.5 && Math.abs(r.lon) < 0.5) continue;
+        if (r.lat < 15 || r.lat > 72 || r.lon < -170 || r.lon > -50) continue;
         var rz = String(r.zip == null ? '' : r.zip).replace(/[^0-9]/g, '').slice(0, 5);
         if (rz.length >= len && rz.slice(0, len) === pfx) {
-          sLat += r.lat; sLon += r.lon; n++;
+          lats.push(r.lat); lons.push(r.lon);
           if (r.market) mkt[r.market] = (mkt[r.market] || 0) + 1;
         }
       }
     }
-    if (!n) return null;
+    if (!lats.length) return null;
+    // Median is robust to the occasional mis-geocoded outlier that would
+    // otherwise drag a mean-based centroid miles off.
+    var cLat = median(lats), cLon = median(lons);
+    // Trim points >15mi from the median, then re-median for a tighter center.
+    var kLat = [], kLon = [], center = { lat: cLat, lon: cLon };
+    for (var j = 0; j < lats.length; j++) {
+      if (havMi(center, { lat: lats[j], lon: lons[j] }) <= 15) { kLat.push(lats[j]); kLon.push(lons[j]); }
+    }
+    if (kLat.length) { cLat = median(kLat); cLon = median(kLon); }
     var bm = '', bc = -1;
     for (var m in mkt) if (mkt.hasOwnProperty(m) && mkt[m] > bc) { bc = mkt[m]; bm = m; }
-    return { lat: sLat / n, lon: sLon / n, market: bm, n: n, exact: len === 5 };
+    return { lat: cLat, lon: cLon, market: bm, n: lats.length, exact: len === 5 };
   }
   return scan(5) || scan(4) || scan(3);
 }
