@@ -1143,7 +1143,7 @@ function renderNDTab(p) {
   return html;
 }
 
-var PARTNER_STATUSES = { 'live partner':1, 'onboarding':1, 'bilt partnership':1, 'paused partner':1 };
+var PARTNER_STATUSES = { 'live partner':1 };  // only a Live Partner counts as "works with Seated"
 function isPartnerStatus(s) { return !!PARTNER_STATUSES[String(s || '').toLowerCase()]; }
 function computeGroup(p) {
   if (!p || !p.id) return null;
