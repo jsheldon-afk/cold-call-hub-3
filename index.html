@@ -126,6 +126,8 @@
 
   /* GROUP / PARENT ACCOUNT */
   .chip-group { background:#EEEBF7; color:#3C3489; }
+  .r-group { font-size:14px; font-weight:600; color:var(--purple); margin:4px 0 8px; }
+  .r-group b { font-weight:700; }
   .grp-banner { padding:10px 14px; font-size:13px; color:var(--text); border-bottom:0.5px solid var(--border); }
   .grp-banner b { color:var(--purple); }
   .grp-partner { margin:8px 14px 0; padding:8px 12px; background:#E6F7EE; color:#0A5E36; border-radius:6px; font-size:12px; font-weight:700; }
@@ -1296,6 +1298,7 @@ function render() {
     + '<div class="card">'
     + '<div class="card-header">Restaurant Info</div>'
     + '<div class="rest-banner"><div class="r-name">' + esc(p.name) + '</div>'
+    + (gInfo ? '<div class="r-group">🏢 Part of <b>' + esc(gInfo.name) + '</b></div>' : '')
     + '<div class="r-chips">'
     + (p.cuisine ? '<span class="chip chip-cuisine">' + esc(p.cuisine) + '</span>' : '')
     + (p.price != null ? '<span class="chip chip-price">' + dollar(p.price) + '</span>' : '')
@@ -1303,7 +1306,6 @@ function render() {
     + (p.market  ? '<span class="chip chip-market">' + esc(p.market) + '</span>' : '')
     + (p.mich ? '<span class="chip chip-acc">⭐ Michelin' + (p.michDetail && !/^[0-9.]+$/.test(p.michDetail) ? ' · ' + esc(p.michDetail) : '') + '</span>' : '')
     + (p.infat ? '<span class="chip chip-acc">⭐ The Infatuation</span>' : '')
-    + (gInfo ? '<span class="chip chip-group" title="Part of ' + esc(gInfo.name) + '">🏢 Part of ' + esc(gInfo.name) + '</span>' : '')
     + (function(){ var gq = encodeURIComponent((p.name || '') + (p.zip ? ' ' + p.zip : (p.market ? ' ' + p.market : ''))); return '<a class="chip chip-glink" href="https://www.google.com/search?q=' + gq + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 G/ZIP</a>'; })()
     + '</div></div>'
     + (p.manual ? '<div class="mkt-compact" style="color:var(--orange);background:var(--orange-lt);">✏️ Manual match · ZIP ' + esc(p.zip) + (p.market ? ' · ' + esc(p.market) : '') + ' — namedroppers & distances are approximate for the area.</div>' : '')
@@ -1323,7 +1325,8 @@ function render() {
     + '</div>'
     + '<div class="panel-content ' + (activeTopTab==='opener'?'active':'') + '" data-group="top" data-tab="opener">' + openerContent + '</div>'
     + '<div class="panel-content ' + (activeTopTab==='close'?'active':'') + '" data-group="top" data-tab="close">' + closeContent + '</div>'
-    + '</div>';
+    + '</div>'
+    + groupCard;
 
   // BUILD RIGHT COLUMN
   var rightCol = ''
@@ -1345,7 +1348,6 @@ function render() {
     + '<div class="panel-tabs" style="flex-wrap:wrap">' + objTabsHtml + '</div>'
     + objPanelsHtml
     + '</div>'
-    + groupCard
     + '<div class="card" style="margin-top:12px">'
     + '<div class="card-header">🔍 Discovery Questions</div>'
     + discContent
