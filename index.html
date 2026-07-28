@@ -126,7 +126,9 @@
 
   /* GROUP / PARENT ACCOUNT */
   .chip-group { background:#EEEBF7; color:#3C3489; }
-  .r-group { font-size:14px; font-weight:600; color:var(--purple); margin:4px 0 8px; }
+  .r-namerow { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+  .r-namerow .r-name { margin-bottom:0; }
+  .r-group { font-size:14px; font-weight:600; color:var(--purple); margin:0 0 0 auto; text-align:right; }
   .r-group b { font-weight:700; }
   .grp-banner { padding:10px 14px; font-size:13px; color:var(--text); border-bottom:0.5px solid var(--border); }
   .grp-banner b { color:var(--purple); }
@@ -1297,8 +1299,10 @@ function render() {
   var leftCol = ''
     + '<div class="card">'
     + '<div class="card-header">Restaurant Info</div>'
-    + '<div class="rest-banner"><div class="r-name">' + esc(p.name) + '</div>'
+    + '<div class="rest-banner">'
+    + '<div class="r-namerow"><div class="r-name">' + esc(p.name) + '</div>'
     + (gInfo ? '<div class="r-group">🏢 Part of <b>' + esc(gInfo.name) + '</b></div>' : '')
+    + '</div>'
     + '<div class="r-chips">'
     + (p.cuisine ? '<span class="chip chip-cuisine">' + esc(p.cuisine) + '</span>' : '')
     + (p.price != null ? '<span class="chip chip-price">' + dollar(p.price) + '</span>' : '')
