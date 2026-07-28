@@ -124,6 +124,35 @@
   .mkt-compact { padding:8px 14px; font-size:11px; color:var(--muted); line-height:1.5; }
   .ph { background:#FFF3B0; color:#5C4D00; padding:0 3px; border-radius:3px; font-weight:600; }
 
+  /* GROUP / PARENT ACCOUNT */
+  .chip-group { background:#EEEBF7; color:#3C3489; }
+  .grp-banner { padding:10px 14px; font-size:13px; color:var(--text); border-bottom:0.5px solid var(--border); }
+  .grp-banner b { color:var(--purple); }
+  .grp-partner { margin:8px 14px 0; padding:8px 12px; background:#E6F7EE; color:#0A5E36; border-radius:6px; font-size:12px; font-weight:700; }
+  .grp-details summary { list-style:none; }
+  .grp-details summary::-webkit-details-marker { display:none; }
+  .grp-summary { cursor:pointer; user-select:none; display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+                 padding:11px 14px; font-size:14px; color:var(--text); background:var(--purple-lt); }
+  .grp-summary::before { content:'▸'; color:var(--purple); font-size:12px; }
+  .grp-details[open] .grp-summary::before { content:'▾'; }
+  .grp-summary b { color:var(--purple); }
+  .grp-hint { color:var(--muted); font-size:11px; font-style:italic; font-weight:400; margin-left:auto; }
+  .grp-sib { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:8px 14px; border-bottom:0.5px solid var(--border); border-top:0.5px solid var(--border); font-size:12px; }
+  .grp-sib + .grp-sib { border-top:none; }
+  .s-left { min-width:0; }
+  .grp-sib .s-name { color:var(--text); font-weight:600; }
+  .grp-sib .s-sub { color:var(--muted); font-size:11px; margin-top:1px; }
+  .s-links { margin-top:4px; }
+  .grp-link { color:var(--blue); text-decoration:none; font-size:11px; font-weight:600; }
+  .grp-link:hover { text-decoration:underline; }
+  .grp-link-off { color:var(--muted); font-size:11px; font-style:italic; }
+  .s-dot { color:#CCC; font-size:11px; }
+  .status-badge { font-size:10px; font-weight:700; padding:1px 7px; border-radius:4px; white-space:nowrap; flex-shrink:0; }
+  .status-partner { background:#E6F7EE; color:#0A5E36; }
+  .status-churned { background:#FCEBEB; color:#A32D2D; }
+  .status-other   { background:#F0F0F0; color:#555; }
+  .grp-more { padding:7px 14px; font-size:11px; color:var(--muted); font-style:italic; }
+
   /* SCRIPT */
   .script-section { border-bottom:0.5px solid var(--border); }
   .script-section:last-child { border-bottom:none; }
@@ -279,6 +308,8 @@ var BILT = {};             // market -> {lead, hoods, buildings, safe, sharp}
 var DINOVA = {};           // market -> {insert, show:[...]}
 var MARKETS = {};          // market -> [{label, value}, ...] market stats
 var SCRIPTS = {};
+var GROUPS_BY_ACCT = {};   // Full Account ID -> {gid, group, name, neighborhood, market, status}
+var GROUPS_BY_ID = {};     // Parent Group ID -> [member recs]
 var tokenClient = null, accessToken = null, userProfile = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -412,18 +443,19 @@ function rebuildDerived() {
   buildPartnerNameIndex();
 }
 function saveCache() {
-  return idbSet(CACHE_KEY, { ts: Date.now(), PROSPECTS: PROSPECTS, PARTNERS: PARTNERS, BILT: BILT, DINOVA: DINOVA, MARKETS: MARKETS, SCRIPTS: SCRIPTS });
+  return idbSet(CACHE_KEY, { ts: Date.now(), PROSPECTS: PROSPECTS, PARTNERS: PARTNERS, BILT: BILT, DINOVA: DINOVA, MARKETS: MARKETS, SCRIPTS: SCRIPTS, GROUPS_BY_ACCT: GROUPS_BY_ACCT, GROUPS_BY_ID: GROUPS_BY_ID });
 }
 function loadCache() {
   return idbGet(CACHE_KEY).then(function(b) {
     if (!b || !b.PROSPECTS || !b.PROSPECTS.length) return false;
     PROSPECTS = b.PROSPECTS; PARTNERS = b.PARTNERS || []; BILT = b.BILT || {}; DINOVA = b.DINOVA || {}; MARKETS = b.MARKETS || {}; SCRIPTS = b.SCRIPTS || {};
+    GROUPS_BY_ACCT = b.GROUPS_BY_ACCT || {}; GROUPS_BY_ID = b.GROUPS_BY_ID || {};
     rebuildDerived();
     return true;
   });
 }
 function networkLoad() {
-  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadMarkets(), loadScriptsFromSheet()])
+  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadMarkets(), loadScriptsFromSheet(), loadGroups()])
     .then(function() { saveCache(); });
 }
 
@@ -584,6 +616,23 @@ function loadMarkets() {
       }
       var topcity = ndi >= 0 ? splitTopLevel(row[ndi]) : [];
       MARKETS[m] = { stats: stats, topcity: topcity };
+    }
+  });
+}
+function loadGroups() {
+  return fetchSheetValues('Groups!A:G').catch(function(){ return []; }).then(function(vals) {
+    GROUPS_BY_ACCT = {}; GROUPS_BY_ID = {};
+    if (!vals.length) return;
+    var H = colMap(vals[0]);
+    function g(row, name) { var i = H[name]; return i == null ? '' : (row[i] != null ? String(row[i]) : ''); }
+    for (var i = 1; i < vals.length; i++) {
+      var row = vals[i]; if (!row) continue;
+      var id = g(row, 'Full Account ID').trim(); if (!id) continue;
+      var gid = g(row, 'Parent Group ID').trim();
+      var rec = { id: id, gid: gid, group: g(row, 'Parent Account').trim(), name: g(row, 'Account Name').trim(),
+                  neighborhood: g(row, 'Neighborhood').trim(), market: g(row, 'Seated Market').trim(), status: g(row, 'Account Status').trim() };
+      GROUPS_BY_ACCT[id] = rec;
+      if (gid) (GROUPS_BY_ID[gid] = GROUPS_BY_ID[gid] || []).push(rec);
     }
   });
 }
@@ -760,8 +809,9 @@ function slugify(s) {
 }
 var slugToIdx = {};
 var idxToSlug = [];
+var idToSlug = {};   // Full Account ID -> slug (for linking to sibling call sheets)
 function buildSlugs() {
-  slugToIdx = {}; idxToSlug = [];
+  slugToIdx = {}; idxToSlug = []; idToSlug = {};
   var counts = {};
   for (var i = 0; i < PROSPECTS.length; i++) {
     var base = slugify(PROSPECTS[i].name) || ('restaurant-' + i);
@@ -770,6 +820,7 @@ function buildSlugs() {
     else { counts[base] += 1; slug = base + '-' + counts[base]; }
     slugToIdx[slug] = i;
     idxToSlug[i] = slug;
+    if (PROSPECTS[i].id) idToSlug[PROSPECTS[i].id] = slug;
   }
 }
 
@@ -1092,11 +1143,60 @@ function renderNDTab(p) {
   return html;
 }
 
+var PARTNER_STATUSES = { 'live partner':1, 'onboarding':1, 'bilt partnership':1, 'paused partner':1 };
+function isPartnerStatus(s) { return !!PARTNER_STATUSES[String(s || '').toLowerCase()]; }
+function computeGroup(p) {
+  if (!p || !p.id) return null;
+  var rec = GROUPS_BY_ACCT[p.id];
+  if (!rec || !rec.gid) return null;
+  var members = GROUPS_BY_ID[rec.gid] || [rec];
+  var sibs = members.filter(function(m) { return m.id !== p.id; }).slice();
+  sibs.sort(function(a, b) {
+    var pa = isPartnerStatus(a.status) ? 0 : 1, pb = isPartnerStatus(b.status) ? 0 : 1;
+    if (pa !== pb) return pa - pb;                       // partners first
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  });
+  var partnerCount = members.filter(function(m) { return isPartnerStatus(m.status); }).length;
+  return { name: rec.group || 'this group', total: members.length, sibs: sibs, partnerCount: partnerCount };
+}
+
 function render() {
   var p = current;
   if (!p) return;
 
   var nd = p.nd || {};
+  var gInfo = computeGroup(p);
+  var groupCard = '';
+  if (gInfo) {
+    var pc = gInfo.partnerCount;
+    var partnerLine = pc > 0
+      ? '<div class="grp-partner">✅ ' + pc + ' location' + (pc > 1 ? 's' : '') + ' in this group already ' + (pc > 1 ? 'work' : 'works') + ' with Seated — lead with that.</div>'
+      : '';
+    var sibHtml = gInfo.sibs.map(function(m) {
+      var cls = isPartnerStatus(m.status) ? 'status-partner' : (/churn/i.test(m.status) ? 'status-churned' : 'status-other');
+      var loc = [m.neighborhood, m.market].filter(Boolean).join(' · ');
+      var slug = idToSlug[m.id];
+      var hubLink = slug
+        ? '<a class="grp-link" href="?r=' + encodeURIComponent(slug) + '" target="_blank" rel="noopener">Open call sheet ↗</a>'
+        : '<span class="grp-link-off">not in hub</span>';
+      var gq = encodeURIComponent(m.name + (m.market ? ' ' + m.market : ''));
+      var gzip = '<a class="grp-link" href="https://www.google.com/search?q=' + gq + '" target="_blank" rel="noopener">🔎 G/ZIP</a>';
+      return '<div class="grp-sib"><div class="s-left"><div class="s-name">' + esc(m.name) + '</div>'
+        + (loc ? '<div class="s-sub">' + esc(loc) + '</div>' : '')
+        + '<div class="s-links">' + hubLink + ' <span class="s-dot">·</span> ' + gzip + '</div></div>'
+        + '<span class="status-badge ' + cls + '">' + esc(m.status || '—') + '</span></div>';
+    }).join('');
+    var locTxt = gInfo.total > 1 ? ' · ' + gInfo.total + ' locations' : '';
+    var sibCount = gInfo.sibs.length;
+    var hint = sibCount ? 'click to see ' + sibCount + ' other location' + (sibCount > 1 ? 's' : '') : '';
+    groupCard = '<div class="card" style="margin-top:12px">'
+      + '<details class="grp-details"' + (pc > 0 ? ' open' : '') + '>'
+      + '<summary class="grp-summary">🏢 Part of <b>' + esc(gInfo.name) + '</b>' + locTxt
+      + (hint ? '<span class="grp-hint">' + hint + '</span>' : '') + '</summary>'
+      + partnerLine
+      + (sibHtml || '<div class="grp-more">No other locations on file.</div>')
+      + '</details></div>';
+  }
   var best = nd.best || [];
   var p1n = (best[0] && best[0].name) || '';
   var p2n = (best[1] && best[1].name) || '';
@@ -1127,6 +1227,7 @@ function render() {
   var dinOne = (nd.dinova && nd.dinova.insert) || SG('din_phrase_none', "our corporate dining partners");
   var V = { name: p.name, nbhd: nbhd, p1: fb1, p2: fb2, dinOne: dinOne, restCount: restCount,
             biltSafe: biltSafe, dinPhrase: dinPhrase, accolPhrase: accolPhrase,
+            group: (gInfo ? gInfo.name : ''),
             partnerFallback: (p1n || SG('partner_fallback_objection', "our partner restaurants")) };
   // S(): use the Scripts-tab value if present, else the built-in default; fills {tokens}
   function S(key, def) {
@@ -1213,6 +1314,8 @@ function render() {
         return '<div class="mkt-compact">' + esc(p.market) + ' market: ' + parts.join(' · ') + '</div>';
       })()
     + '</div>'
+
+    + groupCard
 
     + '<div class="card" style="margin-top:12px">'
     + '<div class="panel-tabs" style="flex-wrap:wrap">'
