@@ -1190,7 +1190,7 @@ function render() {
     var sibCount = gInfo.sibs.length;
     var hint = sibCount ? 'click to see ' + sibCount + ' other location' + (sibCount > 1 ? 's' : '') : '';
     groupCard = '<div class="card" style="margin-top:12px">'
-      + '<details class="grp-details"' + (pc > 0 ? ' open' : '') + '>'
+      + '<details class="grp-details">'
       + '<summary class="grp-summary">🏢 Part of <b>' + esc(gInfo.name) + '</b>' + locTxt
       + (hint ? '<span class="grp-hint">' + hint + '</span>' : '') + '</summary>'
       + partnerLine
@@ -1303,6 +1303,7 @@ function render() {
     + (p.market  ? '<span class="chip chip-market">' + esc(p.market) + '</span>' : '')
     + (p.mich ? '<span class="chip chip-acc">⭐ Michelin' + (p.michDetail && !/^[0-9.]+$/.test(p.michDetail) ? ' · ' + esc(p.michDetail) : '') + '</span>' : '')
     + (p.infat ? '<span class="chip chip-acc">⭐ The Infatuation</span>' : '')
+    + (gInfo ? '<span class="chip chip-group" title="Part of ' + esc(gInfo.name) + '">🏢 Part of ' + esc(gInfo.name) + '</span>' : '')
     + (function(){ var gq = encodeURIComponent((p.name || '') + (p.zip ? ' ' + p.zip : (p.market ? ' ' + p.market : ''))); return '<a class="chip chip-glink" href="https://www.google.com/search?q=' + gq + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 G/ZIP</a>'; })()
     + '</div></div>'
     + (p.manual ? '<div class="mkt-compact" style="color:var(--orange);background:var(--orange-lt);">✏️ Manual match · ZIP ' + esc(p.zip) + (p.market ? ' · ' + esc(p.market) : '') + ' — namedroppers & distances are approximate for the area.</div>' : '')
@@ -1314,8 +1315,6 @@ function render() {
         return '<div class="mkt-compact">' + esc(p.market) + ' market: ' + parts.join(' · ') + '</div>';
       })()
     + '</div>'
-
-    + groupCard
 
     + '<div class="card" style="margin-top:12px">'
     + '<div class="panel-tabs" style="flex-wrap:wrap">'
@@ -1346,6 +1345,7 @@ function render() {
     + '<div class="panel-tabs" style="flex-wrap:wrap">' + objTabsHtml + '</div>'
     + objPanelsHtml
     + '</div>'
+    + groupCard
     + '<div class="card" style="margin-top:12px">'
     + '<div class="card-header">🔍 Discovery Questions</div>'
     + discContent
