@@ -489,7 +489,7 @@ function afterAuth() {
   return loadCache().then(function(hit) {
     if (hit) {
       finishUI(); initApp();                              // instant from cache
-      networkLoad().then(function() { reindex(); }).catch(function(){}); // refresh in background
+      networkLoad().then(function() { reindex(); if (current) render(); }).catch(function(){}); // refresh in background + re-render open account
       return;
     }
     return networkLoad().then(function() { finishUI(); initApp(); });
