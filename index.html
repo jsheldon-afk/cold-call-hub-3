@@ -77,7 +77,10 @@
   .ri-row1{display:flex;align-items:center;gap:12px;padding:12px 14px 0;flex-wrap:wrap;}
   .ri-name{font-size:22px;font-weight:600;letter-spacing:-.01em;color:var(--text);}
   .ri-status{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:3px 9px;border-radius:20px;}
-  .ri-rev{margin-left:auto;display:inline-flex;align-items:center;gap:9px;background:#F4E6C6;border:1px solid #E7CF98;border-radius:10px;padding:5px 12px;white-space:nowrap;}
+  .ri-revwrap{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+  .ri-grouprev{font-size:11.5px;color:var(--muted);font-weight:600;white-space:nowrap;}
+  .ri-grouprev b{color:#7A560E;font-weight:800;font-size:12.5px;}
+  .ri-rev{display:inline-flex;align-items:center;gap:9px;background:#F4E6C6;border:1px solid #E7CF98;border-radius:10px;padding:5px 12px;white-space:nowrap;}
   .ri-rev .n{font-size:18px;font-weight:800;color:#7A560E;line-height:1;}
   .ri-rev .u{font-size:11px;color:#9A7A3A;font-weight:600;}
   .ri-rev .club{font-size:10px;font-weight:800;background:#7A560E;color:#fff;padding:2px 7px;border-radius:5px;}
@@ -1379,9 +1382,13 @@ function render() {
     +   (acctStatus ? '<span class="ri-status ' + acctStatusCls + '">' + esc(acctStatus) + '</span>' : '')
     +   (function(){
           var pr = revOf(p.id), pc = isClub(p.id);
-          if (pr == null && !pc) return '';
-          return '<span class="ri-rev">' + (pr != null ? '<span class="n">$' + commas(pr) + '</span><span class="u">/mo predicted</span>' : '')
-            + (pc ? '<span class="club">🏅 7K Club</span>' : '') + '</span>';
+          var pill = (pr == null && !pc) ? ''
+            : '<span class="ri-rev">' + (pr != null ? '<span class="n">$' + commas(pr) + '</span><span class="u">/mo predicted</span>' : '')
+              + (pc ? '<span class="club">🏅 7K Club</span>' : '') + '</span>';
+          var grpTot = (gInfo && gInfo.total > 1 && gInfo.revTotal != null)
+            ? '<div class="ri-grouprev">Group total <b>$' + commas(gInfo.revTotal) + '/mo</b></div>' : '';
+          if (!pill && !grpTot) return '';
+          return '<div class="ri-revwrap">' + pill + grpTot + '</div>';
         })()
     + '</div>'
     + '<div class="ri-meta">'
