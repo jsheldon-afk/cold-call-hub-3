@@ -126,10 +126,20 @@
 
   /* GROUP / PARENT ACCOUNT */
   .chip-group { background:#EEEBF7; color:#3C3489; }
-  .r-namerow { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+  .r-namerow { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
   .r-namerow .r-name { margin-bottom:0; }
-  .r-group { font-size:14px; font-weight:600; color:var(--purple); margin:0 0 0 auto; text-align:right; }
+  .r-group { font-size:14px; font-weight:600; color:var(--purple); margin:0 0 6px; }
   .r-group b { font-weight:700; }
+  .r-rev { margin-left:auto; display:inline-flex; align-items:center; gap:8px; background:#E6F7EE; color:#0A5E36; font-weight:800; font-size:16px; padding:4px 11px; border-radius:7px; white-space:nowrap; }
+  .r-rev.club { background:#FCEED0; color:#7A5C00; }
+  .r-rev-lbl { font-size:11px; font-weight:600; opacity:0.85; }
+  .r-club { font-size:10px; font-weight:800; background:#F9E795; color:#7A5C00; padding:1px 6px; border-radius:4px; letter-spacing:0.02em; }
+  .r-rev.club .r-club { background:#7A5C00; color:#FFF; }
+  .s-right { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+  .grp-rev { font-size:11px; font-weight:700; color:#0A5E36; }
+  .grp-rev.club { color:#7A5C00; }
+  .grp-total { padding:10px 14px; font-size:12px; color:var(--text); background:var(--purple-lt); border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .grp-total b { color:var(--purple); font-size:16px; white-space:nowrap; }
   .grp-banner { padding:10px 14px; font-size:13px; color:var(--text); border-bottom:0.5px solid var(--border); }
   .grp-banner b { color:var(--purple); }
   .grp-partner { margin:8px 14px 0; padding:8px 12px; background:#E6F7EE; color:#0A5E36; border-radius:6px; font-size:12px; font-weight:700; }
@@ -314,6 +324,7 @@ var MARKETS = {};          // market -> [{label, value}, ...] market stats
 var SCRIPTS = {};
 var GROUPS_BY_ACCT = {};   // Full Account ID -> {gid, group, name, neighborhood, market, status}
 var GROUPS_BY_ID = {};     // Parent Group ID -> [member recs]
+var REV_BY_ACCT = {};      // Full Account ID -> {rev: number|null, club: bool}
 var tokenClient = null, accessToken = null, userProfile = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -447,19 +458,20 @@ function rebuildDerived() {
   buildPartnerNameIndex();
 }
 function saveCache() {
-  return idbSet(CACHE_KEY, { ts: Date.now(), PROSPECTS: PROSPECTS, PARTNERS: PARTNERS, BILT: BILT, DINOVA: DINOVA, MARKETS: MARKETS, SCRIPTS: SCRIPTS, GROUPS_BY_ACCT: GROUPS_BY_ACCT, GROUPS_BY_ID: GROUPS_BY_ID });
+  return idbSet(CACHE_KEY, { ts: Date.now(), PROSPECTS: PROSPECTS, PARTNERS: PARTNERS, BILT: BILT, DINOVA: DINOVA, MARKETS: MARKETS, SCRIPTS: SCRIPTS, GROUPS_BY_ACCT: GROUPS_BY_ACCT, GROUPS_BY_ID: GROUPS_BY_ID, REV_BY_ACCT: REV_BY_ACCT });
 }
 function loadCache() {
   return idbGet(CACHE_KEY).then(function(b) {
     if (!b || !b.PROSPECTS || !b.PROSPECTS.length) return false;
     PROSPECTS = b.PROSPECTS; PARTNERS = b.PARTNERS || []; BILT = b.BILT || {}; DINOVA = b.DINOVA || {}; MARKETS = b.MARKETS || {}; SCRIPTS = b.SCRIPTS || {};
     GROUPS_BY_ACCT = b.GROUPS_BY_ACCT || {}; GROUPS_BY_ID = b.GROUPS_BY_ID || {};
+    REV_BY_ACCT = b.REV_BY_ACCT || {};
     rebuildDerived();
     return true;
   });
 }
 function networkLoad() {
-  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadMarkets(), loadScriptsFromSheet(), loadGroups()])
+  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadMarkets(), loadScriptsFromSheet(), loadGroups(), loadRevenue()])
     .then(function() { saveCache(); });
 }
 
@@ -623,6 +635,35 @@ function loadMarkets() {
     }
   });
 }
+function loadRevenue() {
+  var CHUNK = 20000;
+  return Promise.all([fetchSheetValues('Revenue!A1:C1'), getRowCount('Revenue')]).then(function(res) {
+    var H = colMap(res[0][0] || []); var rowCount = res[1] || 0; var jobs = [];
+    var idI = H['Account ID'], revI = H['Monthly Revenue Prediction'], priI = H['Sales Priority'];
+    for (var start = 2; start <= rowCount; start += CHUNK) {
+      var end = Math.min(start + CHUNK - 1, rowCount);
+      (function(s, e) {
+        jobs.push(fetchSheetValues('Revenue!A' + s + ':C' + e).catch(function(){ return []; }).then(function(v){ return v; }));
+      })(start, end);
+    }
+    return Promise.all(jobs).then(function(chunks) {
+      REV_BY_ACCT = {};
+      for (var c = 0; c < chunks.length; c++) {
+        var vals = chunks[c];
+        for (var i = 0; i < vals.length; i++) {
+          var row = vals[i]; if (!row) continue;
+          var id = (idI != null && row[idI] != null) ? String(row[idI]).trim() : '';
+          if (!id) continue;
+          var pri = (priI != null && row[priI] != null) ? String(row[priI]).trim() : '';
+          REV_BY_ACCT[id] = { rev: n2(revI != null ? row[revI] : null), club: /7k/i.test(pri) };
+        }
+      }
+    });
+  }).catch(function(){ REV_BY_ACCT = {}; });
+}
+function revOf(id) { var r = REV_BY_ACCT[id]; return (r && r.rev != null) ? r.rev : null; }
+function isClub(id) { var r = REV_BY_ACCT[id]; return !!(r && r.club); }
+
 function loadGroups() {
   return fetchSheetValues('Groups!A:G').catch(function(){ return []; }).then(function(vals) {
     GROUPS_BY_ACCT = {}; GROUPS_BY_ID = {};
@@ -1161,7 +1202,10 @@ function computeGroup(p) {
     return String(a.name || '').localeCompare(String(b.name || ''));
   });
   var partnerCount = members.filter(function(m) { return isPartnerStatus(m.status); }).length;
-  return { name: rec.group || 'this group', total: members.length, sibs: sibs, partnerCount: partnerCount };
+  var revTotal = 0, revAny = false;
+  for (var i = 0; i < members.length; i++) { var rv = revOf(members[i].id); if (rv != null) { revTotal += rv; revAny = true; } }
+  return { name: rec.group || 'this group', total: members.length, sibs: sibs, partnerCount: partnerCount,
+           revTotal: revAny ? revTotal : null };
 }
 
 function render() {
@@ -1185,11 +1229,16 @@ function render() {
         : '<span class="grp-link-off">not in hub</span>';
       var gq = encodeURIComponent(m.name + (m.market ? ' ' + m.market : ''));
       var gzip = '<a class="grp-link" href="https://www.google.com/search?q=' + gq + '" target="_blank" rel="noopener">🔎 G/ZIP</a>';
+      var mrev = revOf(m.id), mclub = isClub(m.id);
+      var revTag = mrev != null ? '<div class="grp-rev' + (mclub ? ' club' : '') + '">' + (mclub ? '🏅 ' : '') + '$' + commas(mrev) + '/mo</div>' : '';
       return '<div class="grp-sib"><div class="s-left"><div class="s-name">' + esc(m.name) + '</div>'
         + (loc ? '<div class="s-sub">' + esc(loc) + '</div>' : '')
         + '<div class="s-links">' + hubLink + ' <span class="s-dot">·</span> ' + gzip + '</div></div>'
-        + '<span class="status-badge ' + cls + '">' + esc(m.status || '—') + '</span></div>';
+        + '<div class="s-right"><span class="status-badge ' + cls + '">' + esc(m.status || '—') + '</span>' + revTag + '</div></div>';
     }).join('');
+    var totalRow = gInfo.revTotal != null
+      ? '<div class="grp-total"><span>Total Group Monthly Revenue Prediction</span><b>$' + commas(gInfo.revTotal) + '/mo</b></div>'
+      : '';
     var locTxt = gInfo.total > 1 ? ' · ' + gInfo.total + ' locations' : '';
     var sibCount = gInfo.sibs.length;
     var hint = sibCount ? 'click to see ' + sibCount + ' other location' + (sibCount > 1 ? 's' : '') : '';
@@ -1199,6 +1248,7 @@ function render() {
       + (hint ? '<span class="grp-hint">' + hint + '</span>' : '') + '</summary>'
       + partnerLine
       + (sibHtml || '<div class="grp-more">No other locations on file.</div>')
+      + totalRow
       + '</details></div>';
   }
   var best = nd.best || [];
@@ -1301,8 +1351,14 @@ function render() {
     + '<div class="card-header">Restaurant Info</div>'
     + '<div class="rest-banner">'
     + '<div class="r-namerow"><div class="r-name">' + esc(p.name) + '</div>'
-    + (gInfo ? '<div class="r-group">🏢 Part of <b>' + esc(gInfo.name) + '</b></div>' : '')
+    + (function(){
+        var pr = revOf(p.id), pc = isClub(p.id);
+        if (pr == null && !pc) return '';
+        return '<div class="r-rev' + (pc ? ' club' : '') + '">💰 ' + (pr != null ? '$' + commas(pr) + '<span class="r-rev-lbl">/mo predicted</span>' : '')
+          + (pc ? '<span class="r-club">🏅 7K Club</span>' : '') + '</div>';
+      })()
     + '</div>'
+    + (gInfo ? '<div class="r-group">🏢 Part of <b>' + esc(gInfo.name) + '</b></div>' : '')
     + '<div class="r-chips">'
     + (p.cuisine ? '<span class="chip chip-cuisine">' + esc(p.cuisine) + '</span>' : '')
     + (p.price != null ? '<span class="chip chip-price">' + dollar(p.price) + '</span>' : '')
