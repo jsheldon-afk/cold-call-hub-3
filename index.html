@@ -126,11 +126,12 @@
 
   /* GROUP / PARENT ACCOUNT */
   .chip-group { background:#EEEBF7; color:#3C3489; }
-  .r-namerow { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+  .r-namerow { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
   .r-namerow .r-name { margin-bottom:0; }
-  .r-group { font-size:14px; font-weight:600; color:var(--purple); margin:0 0 6px; }
+  .r-right { margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+  .r-group { font-size:13px; font-weight:600; color:var(--purple); margin:0; }
   .r-group b { font-weight:700; }
-  .r-rev { margin-left:auto; display:inline-flex; align-items:center; gap:8px; background:#E6F7EE; color:#0A5E36; font-weight:800; font-size:16px; padding:4px 11px; border-radius:7px; white-space:nowrap; }
+  .r-rev { display:inline-flex; align-items:center; gap:8px; background:#E6F7EE; color:#0A5E36; font-weight:800; font-size:16px; padding:4px 11px; border-radius:7px; white-space:nowrap; }
   .r-rev.club { background:#FCEED0; color:#7A5C00; }
   .r-rev-lbl { font-size:11px; font-weight:600; opacity:0.85; }
   .r-club { font-size:10px; font-weight:800; background:#F9E795; color:#7A5C00; padding:1px 6px; border-radius:4px; letter-spacing:0.02em; }
@@ -1353,12 +1354,13 @@ function render() {
     + '<div class="r-namerow"><div class="r-name">' + esc(p.name) + '</div>'
     + (function(){
         var pr = revOf(p.id), pc = isClub(p.id);
-        if (pr == null && !pc) return '';
-        return '<div class="r-rev' + (pc ? ' club' : '') + '">💰 ' + (pr != null ? '$' + commas(pr) + '<span class="r-rev-lbl">/mo predicted</span>' : '')
-          + (pc ? '<span class="r-club">🏅 7K Club</span>' : '') + '</div>';
+        var revPill = (pr == null && !pc) ? ''
+          : '<div class="r-rev' + (pc ? ' club' : '') + '">💰 ' + (pr != null ? '$' + commas(pr) + '<span class="r-rev-lbl">/mo predicted</span>' : '')
+            + (pc ? '<span class="r-club">🏅 7K Club</span>' : '') + '</div>';
+        var grpLine = gInfo ? '<div class="r-group">🏢 Part of <b>' + esc(gInfo.name) + '</b></div>' : '';
+        return (revPill || grpLine) ? '<div class="r-right">' + revPill + grpLine + '</div>' : '';
       })()
     + '</div>'
-    + (gInfo ? '<div class="r-group">🏢 Part of <b>' + esc(gInfo.name) + '</b></div>' : '')
     + '<div class="r-chips">'
     + (p.cuisine ? '<span class="chip chip-cuisine">' + esc(p.cuisine) + '</span>' : '')
     + (p.price != null ? '<span class="chip chip-price">' + dollar(p.price) + '</span>' : '')
