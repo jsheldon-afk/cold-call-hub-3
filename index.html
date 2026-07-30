@@ -73,6 +73,26 @@
   .chip-acc     { background:#FCEBEB; color:#A32D2D; }
   .chip-rev     { background:#FFF8E1; color:#8A6D00; }
 
+  /* Cleaned Restaurant Info card */
+  .ri-row1{display:flex;align-items:center;gap:12px;padding:12px 14px 0;flex-wrap:wrap;}
+  .ri-name{font-size:22px;font-weight:600;letter-spacing:-.01em;color:var(--text);}
+  .ri-status{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:3px 9px;border-radius:20px;}
+  .ri-rev{margin-left:auto;display:inline-flex;align-items:center;gap:9px;background:#F4E6C6;border:1px solid #E7CF98;border-radius:10px;padding:5px 12px;white-space:nowrap;}
+  .ri-rev .n{font-size:18px;font-weight:800;color:#7A560E;line-height:1;}
+  .ri-rev .u{font-size:11px;color:#9A7A3A;font-weight:600;}
+  .ri-rev .club{font-size:10px;font-weight:800;background:#7A560E;color:#fff;padding:2px 7px;border-radius:5px;}
+  .ri-meta{display:flex;align-items:center;gap:16px;padding:8px 14px 0;font-size:12.5px;flex-wrap:wrap;}
+  .ri-grp{color:#5B5646;} .ri-grp b{color:var(--purple);}
+  .ri-gzip{color:var(--blue);font-weight:700;text-decoration:none;}
+  .ri-gzip:hover{text-decoration:underline;}
+  .ri-chips{display:flex;gap:7px;flex-wrap:wrap;padding:12px 14px;}
+  .ri-c{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;background:#EEEAE1;color:#5B5646;}
+  .ri-c.acc{background:#F8EDEC;color:#9B3B2E;}
+  .ri-mkt{display:flex;gap:26px;flex-wrap:wrap;align-items:center;padding:12px 14px;background:#FAF7F0;border-top:1px solid var(--border);}
+  .ri-mk{font-size:10px;color:var(--muted);font-weight:800;letter-spacing:.06em;text-transform:uppercase;}
+  .ri-st .v{font-size:15px;font-weight:800;color:#39332A;line-height:1.1;}
+  .ri-st .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;margin-top:2px;}
+
   /* NAMEDROPPER TABS */
   .nd-tabs { display:flex; border-bottom:1px solid var(--border); }
   .nd-tab { flex:1; padding:8px; text-align:center; font-size:11px; font-weight:600; cursor:pointer; color:var(--muted); border-bottom:2px solid transparent; transition:all 0.15s; }
@@ -1354,34 +1374,34 @@ function render() {
   var leftCol = ''
     + '<div class="card">'
     + '<div class="card-header">Restaurant Info</div>'
-    + '<div class="rest-banner">'
-    + '<div class="r-namerow"><div class="r-name">' + esc(p.name) + '</div>'
-    + (acctStatus ? '<span class="status-badge ' + acctStatusCls + '">' + esc(acctStatus) + '</span>' : '')
-    + gzipLink
-    + (function(){
-        var pr = revOf(p.id), pc = isClub(p.id);
-        var revPill = (pr == null && !pc) ? ''
-          : '<div class="r-rev' + (pc ? ' club' : '') + '">💰 ' + (pr != null ? '$' + commas(pr) + '<span class="r-rev-lbl">/mo predicted</span>' : '')
-            + (pc ? '<span class="r-club">🏅 7K Club</span>' : '') + '</div>';
-        var grpLine = gInfo ? '<div class="r-group">🏢 Part of <b>' + esc(gInfo.name) + '</b></div>' : '';
-        return (revPill || grpLine) ? '<div class="r-right">' + grpLine + revPill + '</div>' : '';
-      })()
+    + '<div class="ri-row1">'
+    +   '<span class="ri-name">' + esc(p.name) + '</span>'
+    +   (acctStatus ? '<span class="ri-status ' + acctStatusCls + '">' + esc(acctStatus) + '</span>' : '')
+    +   (function(){
+          var pr = revOf(p.id), pc = isClub(p.id);
+          if (pr == null && !pc) return '';
+          return '<span class="ri-rev">' + (pr != null ? '<span class="n">$' + commas(pr) + '</span><span class="u">/mo predicted</span>' : '')
+            + (pc ? '<span class="club">🏅 7K Club</span>' : '') + '</span>';
+        })()
     + '</div>'
-    + '<div class="r-chips">'
-    + (p.cuisine ? '<span class="chip chip-cuisine">' + esc(p.cuisine) + '</span>' : '')
-    + (p.price != null ? '<span class="chip chip-price">' + dollar(p.price) + '</span>' : '')
-    + (p.reviews ? '<span class="chip chip-rev">★ ' + commas(p.reviews) + '</span>' : '')
-    + (p.neighborhood ? '<span class="chip chip-nbhd">📍 ' + esc(p.neighborhood) + '</span>' : '')
-    + (p.market  ? '<span class="chip chip-market">' + esc(p.market) + '</span>' : '')
-    + (p.mich ? '<span class="chip chip-acc">⭐ Michelin' + (p.michDetail && !/^[0-9.]+$/.test(p.michDetail) ? ' · ' + esc(p.michDetail) : '') + '</span>' : '')
-    + (p.infat ? '<span class="chip chip-acc">⭐ The Infatuation</span>' : '')
-    + '</div></div>'
-    + (p.manual ? '<div class="mkt-compact" style="color:var(--orange);background:var(--orange-lt);">✏️ Manual match · ZIP ' + esc(p.zip) + (p.market ? ' · ' + esc(p.market) : '') + ' — namedroppers & distances are approximate for the area.</div>' : '')
+    + '<div class="ri-meta">'
+    +   (gInfo ? '<span class="ri-grp">🏢 Part of <b>' + esc(gInfo.name) + '</b></span>' : '')
+    +   '<a class="ri-gzip" href="' + gzipHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 Google + ZIP</a>'
+    + '</div>'
+    + (p.manual ? '<div class="mkt-compact" style="color:var(--orange);background:var(--orange-lt);margin-top:8px;">✏️ Manual match · ZIP ' + esc(p.zip) + (p.market ? ' · ' + esc(p.market) : '') + ' — namedroppers & distances are approximate for the area.</div>' : '')
+    + '<div class="ri-chips">'
+    + (p.cuisine ? '<span class="ri-c">' + esc(p.cuisine) + '</span>' : '')
+    + (p.price != null ? '<span class="ri-c">' + dollar(p.price) + '</span>' : '')
+    + (p.reviews ? '<span class="ri-c">★ ' + commas(p.reviews) + ' reviews</span>' : '')
+    + (p.neighborhood ? '<span class="ri-c">📍 ' + esc(p.neighborhood) + '</span>' : '')
+    + (p.mich ? '<span class="ri-c acc">⭐ Michelin' + (p.michDetail && !/^[0-9.]+$/.test(p.michDetail) ? ' · ' + esc(p.michDetail) : '') + '</span>' : '')
+    + (p.infat ? '<span class="ri-c acc">⭐ Infatuation</span>' : '')
+    + '</div>'
     + (function(){
         var stats = (MARKETS[p.market] && MARKETS[p.market].stats) || [];
         if (!stats.length) return '';
-        var parts = stats.map(function(s){ return '<b>' + esc(s.value) + '</b> ' + esc(s.label); });
-        return '<div class="mkt-compact">' + esc(p.market) + ' market: ' + parts.join(' · ') + '</div>';
+        var cells = stats.map(function(s){ return '<div class="ri-st"><div class="v">' + esc(s.value) + '</div><div class="k">' + esc(s.label) + '</div></div>'; }).join('');
+        return '<div class="ri-mkt"><span class="ri-mk">' + esc(p.market) + ' market</span>' + cells + '</div>';
       })()
     + '</div>'
 
