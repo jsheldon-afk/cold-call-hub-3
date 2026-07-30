@@ -128,7 +128,7 @@
   .chip-group { background:#EEEBF7; color:#3C3489; }
   .r-namerow { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
   .r-namerow .r-name { margin-bottom:0; }
-  .r-right { margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+  .r-right { margin-left:auto; display:flex; flex-direction:row; align-items:center; flex-wrap:wrap; justify-content:flex-end; gap:6px 10px; }
   .r-group { font-size:13px; font-weight:600; color:var(--purple); margin:0; }
   .r-group b { font-weight:700; }
   .r-rev { display:inline-flex; align-items:center; gap:8px; background:#E6F7EE; color:#0A5E36; font-weight:800; font-size:16px; padding:4px 11px; border-radius:7px; white-space:nowrap; }
@@ -1358,7 +1358,7 @@ function render() {
           : '<div class="r-rev' + (pc ? ' club' : '') + '">💰 ' + (pr != null ? '$' + commas(pr) + '<span class="r-rev-lbl">/mo predicted</span>' : '')
             + (pc ? '<span class="r-club">🏅 7K Club</span>' : '') + '</div>';
         var grpLine = gInfo ? '<div class="r-group">🏢 Part of <b>' + esc(gInfo.name) + '</b></div>' : '';
-        return (revPill || grpLine) ? '<div class="r-right">' + revPill + grpLine + '</div>' : '';
+        return (revPill || grpLine) ? '<div class="r-right">' + grpLine + revPill + '</div>' : '';
       })()
     + '</div>'
     + '<div class="r-chips">'
