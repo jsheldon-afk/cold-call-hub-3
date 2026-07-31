@@ -1376,8 +1376,7 @@ function render() {
   var gzipLink = '<a class="chip chip-glink" href="' + gzipHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 G/ZIP</a>';
 
   var leftCol = ''
-    + '<div class="card">'
-    + '<div class="card-header">Restaurant Info</div>'
+    + '<div class="card" style="padding-top:4px">'
     + '<div class="ri-row1">'
     +   '<span class="ri-name">' + esc(p.name) + '</span>'
     +   (acctStatus ? '<span class="ri-status ' + acctStatusCls + '">' + esc(acctStatus) + '</span>' : '')
