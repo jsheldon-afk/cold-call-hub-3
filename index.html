@@ -1323,10 +1323,16 @@ function render() {
   function FS(key, def) { return formatScript(S(key, def)); }
 
   // OPENER TAB — cell opener first, restaurant opener second
-  var openerContent = scriptNotice
-    + scriptRow('📱 Cell Phone Opener', FS('cell_opener',
+  var hasND = !!p1n;   // is there at least one "Best" namedropper to insert?
+  var cellOpenerRow = hasND
+    ? scriptRow('📱 Cell Phone Opener', FS('cell_opener',
         "Hey [Owner Name]! How are you?\n\n[Wait for answer]\n\nIt’s [Your Name] over at Seated… gonna be quick. The reason I’m calling is I manage the diner networks for companies like Bank of America and {dinOne}, and I’m working with {p1} and {p2} to send in some of our guests throughout the week — but I’m running into an issue where sometimes we don’t have enough restaurants to recommend to our diners…\n\nI came across {name} and it had great reviews, so I was curious — are there any times throughout the week where you could handle a few more guests if we sent them your way?"),
         'opener-cell', [p1n, p2n], [], dinovaNames)
+    : scriptRow('📱 Cell Phone Opener', FS('cell_opener_no_nd',
+        "Hey [Owner Name]! How are you?\n\n[Wait for answer]\n\nIt’s [Your Name] over at Seated… gonna be quick. The reason I’m calling is I manage the diner networks for companies like Bank of America and {dinOne}, and I’m running into an issue where we don’t have enough restaurants to recommend to our diners in the area…\n\nI came across {name} and it had great reviews, so I was curious — are there any times throughout the week where you could handle a few more guests if we sent them your way?"),
+        'opener-cell', [], [], dinovaNames);
+  var openerContent = scriptNotice
+    + cellOpenerRow
     + scriptRow('📞 Restaurant Line Opener', FS('restaurant_opener',
         "Hi — this is [Your Name]. I’m looking to send some guests to {name}, but I’d need to speak with whoever handles partnerships. Could you help me get in contact with the owner?\n\n[☝ After you get the DM, use the Mobile Opener above.]"),
         'opener-line');
