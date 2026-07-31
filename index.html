@@ -74,7 +74,7 @@
   .chip-rev     { background:#FFF8E1; color:#8A6D00; }
 
   /* Cleaned Restaurant Info card */
-  .ri-row1{display:flex;align-items:center;gap:12px;padding:12px 14px 0;flex-wrap:wrap;}
+  .ri-row1{display:flex;align-items:center;gap:10px;padding:14px 16px 0;flex-wrap:wrap;}
   .ri-name{font-size:22px;font-weight:600;letter-spacing:-.01em;color:var(--text);}
   .ri-status{font-size:10px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;padding:3px 9px;border-radius:20px;}
   .ri-revwrap{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
@@ -84,11 +84,11 @@
   .ri-rev .n{font-size:18px;font-weight:800;color:#7A560E;line-height:1;}
   .ri-rev .u{font-size:11px;color:#9A7A3A;font-weight:600;}
   .ri-rev .club{font-size:10px;font-weight:800;background:#7A560E;color:#fff;padding:2px 7px;border-radius:5px;}
-  .ri-meta{display:flex;align-items:center;gap:16px;padding:8px 14px 0;font-size:12.5px;flex-wrap:wrap;}
+  .ri-meta{display:flex;align-items:center;gap:14px;padding:10px 16px 0;font-size:12.5px;flex-wrap:wrap;}
   .ri-grp{color:#5B5646;} .ri-grp b{color:var(--purple);}
   .ri-gzip{color:var(--blue);font-weight:700;text-decoration:none;}
   .ri-gzip:hover{text-decoration:underline;}
-  .ri-chips{display:flex;gap:7px;flex-wrap:wrap;padding:12px 14px;}
+  .ri-chips{display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px 14px;}
   .ri-c{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;background:#EEEAE1;color:#5B5646;}
   .ri-c.acc{background:#F8EDEC;color:#9B3B2E;}
   .ri-mkt{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;padding:12px 14px;background:#FBF8F1;border-top:1px solid var(--border);}
@@ -1376,7 +1376,7 @@ function render() {
   var gzipLink = '<a class="chip chip-glink" href="' + gzipHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 G/ZIP</a>';
 
   var leftCol = ''
-    + '<div class="card" style="padding-top:4px">'
+    + '<div class="card">'
     + '<div class="ri-row1">'
     +   '<span class="ri-name">' + esc(p.name) + '</span>'
     +   (acctStatus ? '<span class="ri-status ' + acctStatusCls + '">' + esc(acctStatus) + '</span>' : '')
