@@ -84,6 +84,10 @@
   .ri-rev .n{font-size:18px;font-weight:800;color:#7A560E;line-height:1;}
   .ri-rev .u{font-size:11px;color:#9A7A3A;font-weight:600;}
   .ri-rev .club{font-size:10px;font-weight:800;background:#7A560E;color:#fff;padding:2px 7px;border-radius:5px;}
+  .ri-card{overflow:visible;}
+  .ri-help{position:relative;display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:#E7CF98;color:#7A560E;font-size:10px;font-weight:800;cursor:help;flex-shrink:0;}
+  .ri-tip{display:none;position:absolute;top:150%;right:0;width:270px;background:#211D16;color:#F6F0E6;font-size:12px;font-weight:500;line-height:1.55;padding:11px 13px;border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.28);z-index:60;white-space:normal;text-align:left;}
+  .ri-help:hover .ri-tip, .ri-help:focus .ri-tip{display:block;}
   .ri-meta{display:flex;align-items:center;gap:14px;padding:10px 16px 0;font-size:12.5px;flex-wrap:wrap;}
   .ri-grp{color:#5B5646;} .ri-grp b{color:var(--purple);}
   .ri-gzip{color:var(--blue);font-weight:700;text-decoration:none;}
@@ -1356,6 +1360,7 @@ function render() {
     { t: "Don’t do Partnerships", q: "“We don’t do partnerships”", a: FS('obj_dont_partnerships', "**Say:** “Got it — this is probably a little different than what you typically get calls about, so let me take a step back. We’re a restaurant discovery platform, but you can think of us like a private concierge. We feature great restaurants around you like {p1} and {p2} and send in luxury renters and corporate diners throughout the week to boost traffic.\n\nOut of curiosity — are you looking for ways to bring in some new diners, and could you handle a few additional covers throughout the week?”") },
     { t: "Not interested?", q: "“Not interested?”", a: FS('obj_not_interested', "[Mirror — pause]\n**Say:** “‘Not interested?’ … When you say that, is it a cost thing, or just don’t want another platform?”\n\n[If cost] → “No upfront fees, nothing like that.”\n[If ops] → “Zero extra work for your staff — {partnerFallback} run it with no operational changes.”") },
     { t: "Send me an email", q: "“Send me an email”", a: FS('obj_send_email', "**Say:** “Totally — before I do, I just want to make sure this is a good fit. Are you focused on getting more people through the door during the week?”\n\n[Once they engage] → “I actually have a slot open tomorrow at 2 PM. Does that work? I’ll keep it to 20 minutes.”") },
+    { t: "How’d you get my #?", q: "“How did you get my number?”", a: FS('obj_got_number', "**Say:** “Ah, yeah — I have an intern… they’re kind of incredible at finding people online, and I told them I needed to connect with you about sending in guests…”\n\n[Pivot straight to a question — e.g. “Anyway, are there any nights during the week you’d love to fill?”]") },
     { t: "What does it cost?", q: "“What does it cost?”", a: FS('obj_cost', "**Say:** “The price is entirely up to you — depends on how much you want to lean into filling empty seats. Makes a lot more sense when I can show you. Does [time] work?”\n\n[Do NOT quote percentages. Do NOT explain occupancy pricing. Get the meeting.]") },
     { t: "Too Expensive", q: "“Too expensive”", a: FS('obj_too_expensive', "**Say:** “Got it — most of our partners are also pretty concerned about paying for things, especially when margins are so tight in restaurants. Could you stand to do a bit more volume throughout the week?”\n\n[Can always do more]\n“Okay — the reason I ask is because many of our partners are dealing with really expensive rent and tons of other fixed costs. Seated is designed to be an easy way to fill in empty seats and drive incremental traffic, so you end up a bit more profitable each day — and there’s actually no upfront cost. Why don’t we schedule a quick time to chat? If you like what you hear — great; if not, at least you’ll know what we’re offering. Could we chat tomorrow around 10 AM?”") },
     { t: "Used Seated before", q: "“We’ve used Seated before”", a: FS('obj_used_before', "**Say:** “Yeah, I actually see that — we’ve made some big changes since then. We added luxury building and corporate partnerships and significantly increased our volume. Are you open to hearing what’s different? I have time tomorrow — does that work?”") },
@@ -1376,7 +1381,7 @@ function render() {
   var gzipLink = '<a class="chip chip-glink" href="' + gzipHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 G/ZIP</a>';
 
   var leftCol = ''
-    + '<div class="card">'
+    + '<div class="card ri-card">'
     + '<div class="ri-row1">'
     +   '<span class="ri-name">' + esc(p.name) + '</span>'
     +   (acctStatus ? '<span class="ri-status ' + acctStatusCls + '">' + esc(acctStatus) + '</span>' : '')
@@ -1384,7 +1389,9 @@ function render() {
           var pr = revOf(p.id), pc = isClub(p.id);
           var pill = (pr == null && !pc) ? ''
             : '<span class="ri-rev">' + (pr != null ? '<span class="n">$' + commas(pr) + '</span><span class="u">/mo predicted</span>' : '')
-              + (pc ? '<span class="club">🏅 7K Club</span>' : '') + '</span>';
+              + (pc ? '<span class="club">🏅 7K Club</span>' : '')
+              + '<span class="ri-help" tabindex="0">?<span class="ri-tip">We have about 2,800 restaurants on our platform and we’ve analyzed what drives revenue for them — things like your market, how established your restaurant is, your price point, and your location. Based on those factors, we can predict how much revenue you’ll do with us.</span></span>'
+              + '</span>';
           var grpTot = (gInfo && gInfo.total > 1 && gInfo.revTotal != null)
             ? '<div class="ri-grouprev">Group total <b>$' + commas(gInfo.revTotal) + '/mo</b></div>' : '';
           if (!pill && !grpTot) return '';
