@@ -1404,12 +1404,6 @@ function render() {
     + (p.mich ? '<span class="ri-c acc">⭐ Michelin' + (p.michDetail && !/^[0-9.]+$/.test(p.michDetail) ? ' · ' + esc(p.michDetail) : '') + '</span>' : '')
     + (p.infat ? '<span class="ri-c acc">⭐ Infatuation</span>' : '')
     + '</div>'
-    + (function(){
-        var stats = (MARKETS[p.market] && MARKETS[p.market].stats) || [];
-        if (!stats.length) return '';
-        var cells = stats.map(function(s){ return '<div class="ri-st"><div class="v">' + esc(s.value) + '</div><div class="k">' + esc(s.label) + '</div></div>'; }).join('');
-        return '<div class="ri-mkt"><span class="ri-mk">' + esc(p.market) + ' market</span>' + cells + '</div>';
-      })()
     + '</div>'
 
     + '<div class="card" style="margin-top:12px">'
@@ -1423,8 +1417,15 @@ function render() {
     + groupCard;
 
   // BUILD RIGHT COLUMN
+  var marketStrip = (function(){
+    var stats = (MARKETS[p.market] && MARKETS[p.market].stats) || [];
+    if (!stats.length) return '';
+    var cells = stats.map(function(s){ return '<div class="ri-st"><div class="v">' + esc(s.value) + '</div><div class="k">' + esc(s.label) + '</div></div>'; }).join('');
+    return '<div class="card" style="overflow:hidden"><div class="ri-mkt" style="border-top:none"><span class="ri-mk">' + esc(p.market) + ' market</span>' + cells + '</div></div>';
+  })();
   var rightCol = ''
-    + '<div class="card">'
+    + marketStrip
+    + '<div class="card"' + (marketStrip ? ' style="margin-top:12px"' : '') + '>'
     + '<div class="card-header">Namedroppers</div>'
     + '<div class="nd-tabs" style="flex-wrap:wrap">'
     + ndTab('best', '⭐ Best')
