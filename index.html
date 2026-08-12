@@ -355,6 +355,7 @@ var SCRIPTS = {};
 var GROUPS_BY_ACCT = {};   // Full Account ID -> {gid, group, name, neighborhood, market, status}
 var GROUPS_BY_ID = {};     // Parent Group ID -> [member recs]
 var REV_BY_ACCT = {};      // Full Account ID -> {rev: number|null, club: bool}
+var ND_MAX_MI = 15;        // Best namedroppers beyond this many miles are treated as "too far"
 var tokenClient = null, accessToken = null, userProfile = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1212,6 +1213,10 @@ function renderNDTab(p) {
     return hc;
   }
   var items = listMap[activeNDTab] || [];
+  // Best tab: if the nearest Best namedropper is beyond the distance guardrail, blank it with a note.
+  if (activeNDTab === 'best' && items.length && !items.some(function(x){ return x && typeof x._d === 'number' && x._d <= ND_MAX_MI; })) {
+    return '<div class="nd-empty">Nearest Namedropper too Far, Reference Other Tabs</div>';
+  }
   if (!items.length) return '<div class="nd-empty">None found in this market</div>';
   var html = '';
   for (var i = 0; i < items.length; i++) html += partnerRow(items[i], dotMap[activeNDTab] || 'dot-green');
@@ -1327,7 +1332,6 @@ function render() {
   // namedropper is close enough (within ND_MAX_MI). If the nearest Best is
   // farther than that, drop the name-drop and use the "no restaurants in the
   // area" opener instead.
-  var ND_MAX_MI = 15;
   var hasND = best.some(function(b){ return b && typeof b._d === 'number' && b._d <= ND_MAX_MI; });
   var cellOpenerRow = hasND
     ? scriptRow('📱 Cell Phone Opener', FS('cell_opener',
