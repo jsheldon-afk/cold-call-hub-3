@@ -901,13 +901,17 @@ function buildSlugs() {
     var base = slugify(PROSPECTS[i].name) || ('restaurant-' + (slugify(PROSPECTS[i].id) || i));
     (groups[base] = groups[base] || []).push(i);
   }
-  for (var b in groups) {
-    if (!groups.hasOwnProperty(b)) continue;
+  var bases = Object.keys(groups).sort();   // sorted base order → deterministic, order-independent collision resolution
+  for (var g = 0; g < bases.length; g++) {
+    var b = bases[g];
     var idxs = groups[b];
     idxs.sort(function(x, y) { var ix = PROSPECTS[x].id || '', iy = PROSPECTS[y].id || ''; return ix < iy ? -1 : (ix > iy ? 1 : 0); });
+    var n = 0;
     for (var k = 0; k < idxs.length; k++) {
       var idx = idxs[k];
-      var slug = k === 0 ? b : b + '-' + (k + 1);
+      n += 1;
+      var slug = n === 1 ? b : b + '-' + n;
+      while (slugToIdx[slug] !== undefined) { n += 1; slug = b + '-' + n; }  // guarantee global uniqueness (e.g. "Love Pho 2" vs 2nd "Love Pho")
       slugToIdx[slug] = idx;
       idxToSlug[idx] = slug;
       if (PROSPECTS[idx].id) idToSlug[PROSPECTS[idx].id] = slug;
