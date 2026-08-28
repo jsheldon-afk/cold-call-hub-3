@@ -210,6 +210,10 @@
   .script-label.opener-cell { border-left:3px solid #7B9ED9; }
   .script-text { padding:10px 12px; font-size:13px; color:var(--script-text); line-height:1.7; white-space:pre-line; }
   .dir { color:#C0392B; font-style:italic; font-weight:normal; }
+  .checklist { padding:8px 12px 12px; }
+  .check { display:flex; align-items:flex-start; gap:9px; padding:7px 0; font-size:13px; color:var(--script-text); cursor:pointer; line-height:1.5; }
+  .check input { margin-top:2px; width:15px; height:15px; flex-shrink:0; cursor:pointer; accent-color:#185FA5; }
+  .check input:checked + span { text-decoration:line-through; color:var(--muted); }
   .script-notice { background:#FFF3F3; border:1px solid #FBBCBC; border-radius:6px; padding:7px 12px; font-size:11px; font-weight:700; color:#C0392B; letter-spacing:0.06em; margin:8px 8px 0; }
   .disc-closing { background:#E8F0FB; border-left:3px solid var(--blue); padding:8px 12px; font-size:12px; color:var(--blue); font-weight:600; margin-top:4px; }
   .disc-closing-body { padding:8px 12px; font-size:12px; color:#555; line-height:1.6; white-space:pre-line; }
@@ -1393,7 +1397,17 @@ function render() {
         return formatScript(t);
       })())
     + scriptRow('Restaurant Line — Get Their Cell #', FS('close_get_cell',
-        "[If you reached them on the restaurant’s business line, get their cell before you hang up:]\n\n“Oh — and listen, I don’t want to tie you up on your business line next time I follow up. What’s the best cell to reach you on?”\n\n[They give it]\n“Perfect — I’ll text you a reminder before we hop on.”\n\n[They don’t give it out]\n“Totally hear you, not going to spam you — I just know you’re always running around and it’s easier to text than play phone tag. Also I can send you a link to what we’d be looking at on the call so you can preview it beforehand.”"));
+        "[If you reached them on the restaurant’s business line, get their cell before you hang up:]\n\n“Oh — and listen, I don’t want to tie you up on your business line next time I follow up. What’s the best cell to reach you on?”\n\n[They give it]\n“Perfect — I’ll text you a reminder before we hop on.”\n\n[They don’t give it out]\n“Totally hear you, not going to spam you — I just know you’re always running around and it’s easier to text than play phone tag. Also I can send you a link to what we’d be looking at on the call so you can preview it beforehand.”"))
+    + '<div class="script-section">'
+    +   '<div class="script-label">✅ Closing Checklist — before you hang up</div>'
+    +   '<div class="checklist">'
+    +     '<label class="check"><input type="checkbox"><span>Are you speaking with the main decision-maker?</span></label>'
+    +     '<label class="check"><input type="checkbox"><span>Got their full name, cell number, and email?</span></label>'
+    +     '<label class="check"><input type="checkbox"><span>Set expectations that it\'s a Google Meet — and to tap Accept on the invite?</span></label>'
+    +     '<label class="check"><input type="checkbox"><span>Sent a follow-up email right after booking?</span></label>'
+    +     '<label class="check"><input type="checkbox"><span>Scheduled within 24 hours?</span></label>'
+    +   '</div>'
+    + '</div>';
 
   // Gatekeeper Stonewall (shown as an objection tab)
   var gkStonewall = FS('gatekeeper',
