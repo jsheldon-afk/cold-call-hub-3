@@ -587,7 +587,8 @@ function parseRestaurant(row, H) {
     cuisine: cleanCuisine(g('Primary Cuisine')), btype: g('Business Type').trim(), rtype: g('Restaurant Type').trim(),
     price: priceLvl(g('Google Price Level')), reviews: n2(g('# Google User Ratings')) || 0,
     infat: (n2(g('In Infatuation?')) === 1) ? 1 : 0, mich: (n2(g('In Michelin Guide?')) === 1) ? 1 : 0,
-    michDetail: g('Michelin Detail'), gmv: n2(g('GMV (Last 30)')) || 0, tier: g('NameDropper').trim()
+    michDetail: g('Michelin Detail'), gmv: n2(g('GMV (Last 30)')) || 0, tier: g('NameDropper').trim(),
+    status: g('Account Status').trim()
   };
 }
 
@@ -737,12 +738,12 @@ function getRowCount(name) {
 }
 function loadAccounts() {
   var CHUNK = 15000;
-  return Promise.all([fetchSheetValues('Accounts!A1:P1'), getRowCount('Accounts')]).then(function(res) {
+  return Promise.all([fetchSheetValues('Accounts!A1:Q1'), getRowCount('Accounts')]).then(function(res) {
     var H = colMap(res[0][0] || []); var rowCount = res[1] || 0; var jobs = [];
     for (var start = 2; start <= rowCount; start += CHUNK) {
       var end = Math.min(start + CHUNK - 1, rowCount);
       (function(s, e) {
-        jobs.push(fetchSheetValues('Accounts!A' + s + ':P' + e).catch(function(){ return []; }).then(function(v) { return { s: s, v: v }; }));
+        jobs.push(fetchSheetValues('Accounts!A' + s + ':Q' + e).catch(function(){ return []; }).then(function(v) { return { s: s, v: v }; }));
       })(start, end);
     }
     return Promise.all(jobs).then(function(results) {
@@ -892,15 +893,25 @@ var idxToSlug = [];
 var idToSlug = {};   // Full Account ID -> slug (for linking to sibling call sheets)
 function buildSlugs() {
   slugToIdx = {}; idxToSlug = []; idToSlug = {};
-  var counts = {};
+  // Group rows by base slug, then resolve duplicate names deterministically by
+  // Full Account ID (NOT row order) so links stay stable when the Accounts tab
+  // is replaced/reordered.
+  var groups = {};
   for (var i = 0; i < PROSPECTS.length; i++) {
-    var base = slugify(PROSPECTS[i].name) || ('restaurant-' + i);
-    var slug = base;
-    if (counts[base] === undefined) { counts[base] = 1; }
-    else { counts[base] += 1; slug = base + '-' + counts[base]; }
-    slugToIdx[slug] = i;
-    idxToSlug[i] = slug;
-    if (PROSPECTS[i].id) idToSlug[PROSPECTS[i].id] = slug;
+    var base = slugify(PROSPECTS[i].name) || ('restaurant-' + (slugify(PROSPECTS[i].id) || i));
+    (groups[base] = groups[base] || []).push(i);
+  }
+  for (var b in groups) {
+    if (!groups.hasOwnProperty(b)) continue;
+    var idxs = groups[b];
+    idxs.sort(function(x, y) { var ix = PROSPECTS[x].id || '', iy = PROSPECTS[y].id || ''; return ix < iy ? -1 : (ix > iy ? 1 : 0); });
+    for (var k = 0; k < idxs.length; k++) {
+      var idx = idxs[k];
+      var slug = k === 0 ? b : b + '-' + (k + 1);
+      slugToIdx[slug] = idx;
+      idxToSlug[idx] = slug;
+      if (PROSPECTS[idx].id) idToSlug[PROSPECTS[idx].id] = slug;
+    }
   }
 }
 
@@ -1400,7 +1411,7 @@ function render() {
   }
 
   // BUILD LEFT COLUMN
-  var acctStatus = (GROUPS_BY_ACCT[p.id] && GROUPS_BY_ACCT[p.id].status) || '';
+  var acctStatus = p.status || (GROUPS_BY_ACCT[p.id] && GROUPS_BY_ACCT[p.id].status) || '';
   var acctStatusCls = isPartnerStatus(acctStatus) ? 'status-partner' : (/churn/i.test(acctStatus) ? 'status-churned' : 'status-other');
   var gzipHref = 'https://www.google.com/search?q=' + encodeURIComponent((p.name || '') + (p.zip ? ' ' + p.zip : (p.market ? ' ' + p.market : '')));
   var gzipLink = '<a class="chip chip-glink" href="' + gzipHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 G/ZIP</a>';
