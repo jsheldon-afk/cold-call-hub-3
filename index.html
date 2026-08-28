@@ -129,6 +129,11 @@
   .chip-glink:hover{ background:#124a82; }
   .nd-glink        { color:var(--blue); font-weight:700; text-decoration:none; cursor:pointer; font-size:11.5px; }
   .nd-glink:hover  { text-decoration:underline; }
+  .nd-more         { padding:11px 16px; border-top:1px solid #F1EADC; font-size:12px; color:var(--muted); }
+  .nd-more a       { color:var(--blue); font-weight:700; text-decoration:none; }
+  .nd-more a:hover { text-decoration:underline; }
+  .nd-login        { margin-top:5px; font-size:11px; color:var(--muted); }
+  .nd-login b      { color:#4A4238; font-weight:700; }
   .nd-empty { padding:14px 12px; color:var(--muted); font-style:italic; font-size:12px; text-align:center; }
 
   /* MATCH SIGNALS */
@@ -356,6 +361,7 @@ var GROUPS_BY_ACCT = {};   // Full Account ID -> {gid, group, name, neighborhood
 var GROUPS_BY_ID = {};     // Parent Group ID -> [member recs]
 var REV_BY_ACCT = {};      // Full Account ID -> {rev: number|null, club: bool}
 var ND_MAX_MI = 15;        // Best namedroppers beyond this many miles are treated as "too far"
+var RESOURCES = {};        // key -> value from the auth-gated Resources tab (e.g. Tableau login)
 var tokenClient = null, accessToken = null, userProfile = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -489,7 +495,7 @@ function rebuildDerived() {
   buildPartnerNameIndex();
 }
 function saveCache() {
-  return idbSet(CACHE_KEY, { ts: Date.now(), PROSPECTS: PROSPECTS, PARTNERS: PARTNERS, BILT: BILT, DINOVA: DINOVA, MARKETS: MARKETS, SCRIPTS: SCRIPTS, GROUPS_BY_ACCT: GROUPS_BY_ACCT, GROUPS_BY_ID: GROUPS_BY_ID, REV_BY_ACCT: REV_BY_ACCT });
+  return idbSet(CACHE_KEY, { ts: Date.now(), PROSPECTS: PROSPECTS, PARTNERS: PARTNERS, BILT: BILT, DINOVA: DINOVA, MARKETS: MARKETS, SCRIPTS: SCRIPTS, GROUPS_BY_ACCT: GROUPS_BY_ACCT, GROUPS_BY_ID: GROUPS_BY_ID, REV_BY_ACCT: REV_BY_ACCT, RESOURCES: RESOURCES });
 }
 function loadCache() {
   return idbGet(CACHE_KEY).then(function(b) {
@@ -497,12 +503,13 @@ function loadCache() {
     PROSPECTS = b.PROSPECTS; PARTNERS = b.PARTNERS || []; BILT = b.BILT || {}; DINOVA = b.DINOVA || {}; MARKETS = b.MARKETS || {}; SCRIPTS = b.SCRIPTS || {};
     GROUPS_BY_ACCT = b.GROUPS_BY_ACCT || {}; GROUPS_BY_ID = b.GROUPS_BY_ID || {};
     REV_BY_ACCT = b.REV_BY_ACCT || {};
+    RESOURCES = b.RESOURCES || {};
     rebuildDerived();
     return true;
   });
 }
 function networkLoad() {
-  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadMarkets(), loadScriptsFromSheet(), loadGroups(), loadRevenue()])
+  return Promise.all([loadAccounts(), loadPartners(), loadBILT(), loadDinova(), loadMarkets(), loadScriptsFromSheet(), loadGroups(), loadRevenue(), loadResources()])
     .then(function() { saveCache(); });
 }
 
@@ -665,6 +672,12 @@ function loadMarkets() {
       var topcity = ndi >= 0 ? splitTopLevel(row[ndi]) : [];
       MARKETS[m] = { stats: stats, topcity: topcity };
     }
+  });
+}
+function loadResources() {
+  return fetchSheetValues('Resources!A2:B').catch(function(){ return []; }).then(function(rows) {
+    RESOURCES = {};
+    for (var i = 0; i < rows.length; i++) { var k = rows[i][0]; if (k) RESOURCES[String(k).trim()] = rows[i][1] != null ? String(rows[i][1]) : ''; }
   });
 }
 function loadRevenue() {
@@ -1484,6 +1497,11 @@ function render() {
     + ndTab('dinova', 'Dinova')
     + '</div>'
     + '<div class="nd-items" id="nd-items">' + renderNDTab(p) + '</div>'
+    + '<div class="nd-more">🔎 Need more names? '
+    +   '<a href="https://us-east-1.online.tableau.com/#/site/seateddataportal/views/NeighborhoodNamedroppers/NeighborhoodNamedroppers?:iid=1" target="_blank" rel="noopener">All Namedroppers ↗</a> · '
+    +   '<a href="https://us-east-1.online.tableau.com/#/site/seateddataportal/views/NearbyRestaurants-SalesTool/NearbyRestaurants?%3Aiid=1" target="_blank" rel="noopener">Nearby Restaurants ↗</a>'
+    +   (RESOURCES.tableau_user ? '<div class="nd-login">Tableau login — <b>' + esc(RESOURCES.tableau_user) + '</b>' + (RESOURCES.tableau_pass ? ' / <b>' + esc(RESOURCES.tableau_pass) + '</b>' : '') + '</div>' : '')
+    + '</div>'
     + '</div>'
     + '<div class="card" style="margin-top:12px">'
     + '<div class="card-header">🛡 Objection Handling</div>'
