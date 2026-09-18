@@ -703,8 +703,8 @@ function loadRevenue() {
           var row = vals[i]; if (!row) continue;
           var id = (idI != null && row[idI] != null) ? String(row[idI]).trim() : '';
           if (!id) continue;
-          var pri = (priI != null && row[priI] != null) ? String(row[priI]).trim() : '';
-          REV_BY_ACCT[id] = { rev: n2(revI != null ? row[revI] : null), club: /7k/i.test(pri) };
+          var rv = n2(revI != null ? row[revI] : null);
+          REV_BY_ACCT[id] = { rev: rv, club: (rv != null && rv >= 7000) };  // 7K Club = predicted revenue >= $7,000
         }
       }
     });
