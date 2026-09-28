@@ -286,10 +286,10 @@
   <div class="search-main">
     <div class="search-wrap" id="search-wrap">
       <span class="icon">🔍</span>
-      <input type="text" id="search-input" placeholder="Search any restaurant..." autocomplete="off" />
+      <input type="text" id="search-input" placeholder="Search any restaurant — add a city to narrow (e.g. Miyako Houston)" autocomplete="off" />
       <div class="dropdown" id="dropdown" style="display:none"></div>
     </div>
-    <div class="search-hint" id="search-hint">Type a restaurant name to load the full call sheet</div>
+    <div class="search-hint" id="search-hint">Type a restaurant name — add the city or market to narrow duplicates (e.g. "Miyako Houston")</div>
   </div>
   <div class="search-actions">
     <span id="mkt-label" style="font-size:11px; color:var(--muted);"></span>
@@ -939,7 +939,10 @@ function buildSlugs() {
 function reindex() {
   searchIndex.length = 0;
   for (var i = 0; i < PROSPECTS.length; i++) {
-    searchIndex.push({ i: i, nl: PROSPECTS[i].name.toLowerCase() });
+    var p = PROSPECTS[i];
+    var hay = [p.name, p.city, p.market, p.neighborhood, p.address]
+      .filter(Boolean).join(' ').toLowerCase();
+    searchIndex.push({ i: i, nl: p.name.toLowerCase(), hay: hay });
   }
   buildSlugs();
   buildCuisineList();
@@ -1079,12 +1082,20 @@ window.runManual = runManual;
 function showDropdown(q) {
   var results = [];
   if (q) {
+    var terms = q.split(/\s+/).filter(Boolean);
     for (var i = 0; i < searchIndex.length; i++) {
-      if (searchIndex[i].nl.indexOf(q) >= 0) {
-        results.push(searchIndex[i]);
-        if (results.length >= 12) break;
+      var si = searchIndex[i], ok = true;
+      for (var t = 0; t < terms.length; t++) {
+        if (si.hay.indexOf(terms[t]) < 0) { ok = false; break; }
+      }
+      if (ok) {
+        // rank: name starts with query > name contains first term > other (city/market) match
+        si._r = si.nl.indexOf(q) === 0 ? 0 : (si.nl.indexOf(terms[0]) >= 0 ? 1 : 2);
+        results.push(si);
       }
     }
+    results.sort(function(a, b) { return a._r - b._r; });
+    results = results.slice(0, 12);
   } else {
     results = searchIndex.slice(0, 10);
   }
