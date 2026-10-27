@@ -82,13 +82,19 @@
   .ri-grouprev b{color:#7A560E;font-weight:800;font-size:12.5px;}
   .ri-rev{display:inline-flex;align-items:center;gap:11px;background:#F4E6C6;border:1px solid #E7CF98;border-radius:10px;padding:7px 13px;white-space:nowrap;}
   .ri-rev .annual{display:flex;flex-direction:column;line-height:1;}
-  .ri-rev .annual .n{font-size:26px;font-weight:800;color:#7A560E;line-height:1;letter-spacing:-.01em;}
-  .ri-rev .annual .u{font-size:10.5px;color:#9A7A3A;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-top:3px;}
+  .ri-rev .annual .n{display:block;font-size:26px;font-weight:800;color:#7A560E;line-height:1;letter-spacing:-.01em;}
+  .ri-rev .annual .u{display:block;font-size:10.5px;color:#9A7A3A;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-top:3px;}
   .ri-rev .mo{font-size:12px;color:#8A6A28;font-weight:700;border-left:1px solid #E7CF98;padding-left:11px;}
   .ri-rev .mo b{color:#7A560E;font-weight:800;}
   .ri-rev .n{font-size:18px;font-weight:800;color:#7A560E;line-height:1;}
   .ri-rev .u{font-size:11px;color:#9A7A3A;font-weight:600;}
   .ri-rev .club{font-size:10px;font-weight:800;background:#7A560E;color:#fff;padding:2px 7px;border-radius:5px;}
+  /* Revenue annual/monthly toggle: annualized shown by default */
+  .rv-mo{display:none;}
+  body.rev-mode-mo .rv-yr{display:none;}
+  body.rev-mode-mo .rv-mo{display:inline;}
+  .rev-toggle{font-size:10px;font-weight:800;color:#7A560E;background:#fff;border:1px solid #E7CF98;border-radius:6px;padding:4px 9px;cursor:pointer;white-space:nowrap;line-height:1;}
+  .rev-toggle:hover{background:#FBF4E2;}
   .ri-card{overflow:visible;}
   .ri-help{position:relative;display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:#E7CF98;color:#7A560E;font-size:10px;font-weight:800;cursor:help;flex-shrink:0;}
   .ri-tip{display:none;position:absolute;top:150%;right:0;width:270px;background:#211D16;color:#F6F0E6;font-size:12px;font-weight:500;line-height:1.55;padding:11px 13px;border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.28);z-index:60;white-space:normal;text-align:left;}
@@ -1218,6 +1224,20 @@ function discRow(boldQ, tipA) {
 
 function dollar(n) { return (n == null) ? '' : ('$'.repeat(n) || '$?'); }
 function commas(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+// Revenue amount that flips between annualized (default) and monthly via the global toggle.
+// mo = monthly value; styled by caller-supplied class on the amount.
+function revAmt(mo, nCls, uCls) {
+  nCls = nCls || 'n'; uCls = uCls || 'u';
+  return '<span class="rv-yr"><span class="' + nCls + '">$' + commas(mo * 12) + '</span><span class="' + uCls + '">/yr predicted</span></span>'
+       + '<span class="rv-mo"><span class="' + nCls + '">$' + commas(mo) + '</span><span class="' + uCls + '">/mo predicted</span></span>';
+}
+// Compact inline "$X/yr" ↔ "$X/mo" (no separate unit element).
+function revInline(mo) {
+  return '<span class="rv-yr">$' + commas(mo * 12) + '/yr</span><span class="rv-mo">$' + commas(mo) + '/mo</span>';
+}
+function revToggleBtn() {
+  return '<button type="button" class="rev-toggle" onclick="document.body.classList.toggle(\'rev-mode-mo\')" title="Switch between annual and monthly estimates"><span class="rv-yr">Show monthly</span><span class="rv-mo">Show annual</span></button>';
+}
 
 function partnerRow(p, dotClass) {
   var badges = '';
@@ -1327,14 +1347,14 @@ function render() {
       var gq = encodeURIComponent(m.name + (m.market ? ' ' + m.market : ''));
       var gzip = '<a class="grp-link" href="https://www.google.com/search?q=' + gq + '" target="_blank" rel="noopener">🔎 G/ZIP</a>';
       var mrev = revOf(m.id), mclub = isClub(m.id);
-      var revTag = mrev != null ? '<div class="grp-rev' + (mclub ? ' club' : '') + '">' + (mclub ? '🏅 ' : '') + '$' + commas(mrev) + '/mo</div>' : '';
+      var revTag = mrev != null ? '<div class="grp-rev' + (mclub ? ' club' : '') + '">' + (mclub ? '🏅 ' : '') + revInline(mrev) + '</div>' : '';
       return '<div class="grp-sib"><div class="s-left"><div class="s-name">' + esc(m.name) + '</div>'
         + (loc ? '<div class="s-sub">' + esc(loc) + '</div>' : '')
         + '<div class="s-links">' + hubLink + ' <span class="s-dot">·</span> ' + gzip + '</div></div>'
         + '<div class="s-right"><span class="status-badge ' + cls + '">' + esc(m.status || '—') + '</span>' + revTag + '</div></div>';
     }).join('');
     var totalRow = gInfo.revTotal != null
-      ? '<div class="grp-total"><span>Total Group Monthly Revenue Prediction</span><b>$' + commas(gInfo.revTotal) + '/mo</b></div>'
+      ? '<div class="grp-total"><span><span class="rv-yr">Total Group Annual Revenue Prediction</span><span class="rv-mo">Total Group Monthly Revenue Prediction</span></span><b>' + revInline(gInfo.revTotal) + '</b></div>'
       : '';
     var locTxt = gInfo.total > 1 ? ' · ' + gInfo.total + ' locations' : '';
     var sibCount = gInfo.sibs.length;
@@ -1497,12 +1517,13 @@ function render() {
     +   (function(){
           var pr = revOf(p.id), pc = isClub(p.id);
           var pill = (pr == null && !pc) ? ''
-            : '<span class="ri-rev">' + (pr != null ? '<span class="annual"><span class="n">$' + commas(pr * 12) + '</span><span class="u">/yr predicted</span></span><span class="mo"><b>$' + commas(pr) + '</b>/mo</span>' : '')
+            : '<span class="ri-rev">' + (pr != null ? '<span class="annual">' + revAmt(pr) + '</span>' : '')
               + (pc ? '<span class="club">🏅 7K Club</span>' : '')
+              + (pr != null ? revToggleBtn() : '')
               + '<span class="ri-help" tabindex="0">?<span class="ri-tip">We have about 3,000 restaurants on our platform and we’ve analyzed what drives revenue for them — things like your market, how established your restaurant is, your price point, and your location. Based on those factors, we can predict how much revenue you’ll do with us.</span></span>'
               + '</span>';
           var grpTot = (gInfo && gInfo.total > 1 && gInfo.revTotal != null)
-            ? '<div class="ri-grouprev">Group total <b>$' + commas(gInfo.revTotal) + '/mo</b></div>' : '';
+            ? '<div class="ri-grouprev">Group total <b>' + revInline(gInfo.revTotal) + '</b></div>' : '';
           if (!pill && !grpTot) return '';
           return '<div class="ri-revwrap">' + pill + grpTot + '</div>';
         })()
