@@ -96,9 +96,12 @@
   .ri-c{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;background:#EEEAE1;color:#5B5646;}
   .ri-c.acc{background:#F8EDEC;color:#9B3B2E;}
   .ri-awards{margin:0 16px 14px;padding:11px 14px;background:#FBF4E2;border:1px solid #EAD6A6;border-radius:12px;}
-  .ri-awards-h{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#7A560E;margin-bottom:9px;display:flex;align-items:center;gap:7px;}
+  .ri-awards-h{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#7A560E;display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;}
   .ri-awards-n{font-size:10px;font-weight:800;background:#7A560E;color:#fff;border-radius:20px;padding:1px 8px;}
-  .ri-awards-list{display:flex;gap:7px;flex-wrap:wrap;}
+  .ri-awards-caret{margin-left:auto;font-size:10px;transition:transform .15s;color:#7A560E;}
+  .ri-awards.collapsed .ri-awards-caret{transform:rotate(-90deg);}
+  .ri-awards-list{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;}
+  .ri-awards.collapsed .ri-awards-list{display:none;}
   .ri-award{font-size:11.5px;font-weight:600;line-height:1.3;padding:4px 10px;border-radius:7px;background:#fff;border:1px solid #E7CF98;color:#6B5212;}
   .ri-award-more{font-size:11.5px;font-weight:700;padding:4px 10px;color:#9A7A3A;align-self:center;}
   .ri-mkt{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;padding:12px 14px;background:#FBF8F1;border-top:1px solid var(--border);}
@@ -1477,7 +1480,7 @@ function render() {
       var SHOWN = 10, extra = awardsU.length - SHOWN;
       var pills = awardsU.slice(0, SHOWN).map(function(a){ return '<span class="ri-award">' + esc(a) + '</span>'; }).join('');
       if (extra > 0) pills += '<span class="ri-award-more">+' + extra + ' more</span>';
-      awardsHtml = '<div class="ri-awards"><div class="ri-awards-h">🏆 Awards &amp; Accolades <span class="ri-awards-n">' + awardsU.length + '</span></div><div class="ri-awards-list">' + pills + '</div></div>';
+      awardsHtml = '<div class="ri-awards collapsed"><div class="ri-awards-h" onclick="this.parentNode.classList.toggle(\'collapsed\')">🏆 Awards &amp; Accolades <span class="ri-awards-n">' + awardsU.length + '</span><span class="ri-awards-caret">▼</span></div><div class="ri-awards-list">' + pills + '</div></div>';
     }
   }
 
