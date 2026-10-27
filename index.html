@@ -80,7 +80,12 @@
   .ri-revwrap{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
   .ri-grouprev{font-size:11.5px;color:var(--muted);font-weight:600;white-space:nowrap;}
   .ri-grouprev b{color:#7A560E;font-weight:800;font-size:12.5px;}
-  .ri-rev{display:inline-flex;align-items:center;gap:9px;background:#F4E6C6;border:1px solid #E7CF98;border-radius:10px;padding:5px 12px;white-space:nowrap;}
+  .ri-rev{display:inline-flex;align-items:center;gap:11px;background:#F4E6C6;border:1px solid #E7CF98;border-radius:10px;padding:7px 13px;white-space:nowrap;}
+  .ri-rev .annual{display:flex;flex-direction:column;line-height:1;}
+  .ri-rev .annual .n{font-size:26px;font-weight:800;color:#7A560E;line-height:1;letter-spacing:-.01em;}
+  .ri-rev .annual .u{font-size:10.5px;color:#9A7A3A;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-top:3px;}
+  .ri-rev .mo{font-size:12px;color:#8A6A28;font-weight:700;border-left:1px solid #E7CF98;padding-left:11px;}
+  .ri-rev .mo b{color:#7A560E;font-weight:800;}
   .ri-rev .n{font-size:18px;font-weight:800;color:#7A560E;line-height:1;}
   .ri-rev .u{font-size:11px;color:#9A7A3A;font-weight:600;}
   .ri-rev .club{font-size:10px;font-weight:800;background:#7A560E;color:#fff;padding:2px 7px;border-radius:5px;}
@@ -1492,7 +1497,7 @@ function render() {
     +   (function(){
           var pr = revOf(p.id), pc = isClub(p.id);
           var pill = (pr == null && !pc) ? ''
-            : '<span class="ri-rev">' + (pr != null ? '<span class="n">$' + commas(pr) + '</span><span class="u">/mo predicted</span>' : '')
+            : '<span class="ri-rev">' + (pr != null ? '<span class="annual"><span class="n">$' + commas(pr * 12) + '</span><span class="u">/yr predicted</span></span><span class="mo"><b>$' + commas(pr) + '</b>/mo</span>' : '')
               + (pc ? '<span class="club">🏅 7K Club</span>' : '')
               + '<span class="ri-help" tabindex="0">?<span class="ri-tip">We have about 3,000 restaurants on our platform and we’ve analyzed what drives revenue for them — things like your market, how established your restaurant is, your price point, and your location. Based on those factors, we can predict how much revenue you’ll do with us.</span></span>'
               + '</span>';
