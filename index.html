@@ -1493,6 +1493,7 @@ function render() {
   var acctStatusCls = isPartnerStatus(acctStatus) ? 'status-partner' : (/churn/i.test(acctStatus) ? 'status-churned' : 'status-other');
   var gzipHref = 'https://www.google.com/search?q=' + encodeURIComponent((p.name || '') + (p.zip ? ' ' + p.zip : (p.market ? ' ' + p.market : '')));
   var gzipLink = '<a class="chip chip-glink" href="' + gzipHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 G/ZIP</a>';
+  var ownerHref = 'https://www.google.com/search?q=' + encodeURIComponent((p.name || '') + (p.zip ? ' ' + p.zip : (p.market ? ' ' + p.market : '')) + ' owner');
 
   // Awards callout — accolades the prospect has earned (credibility / opener fuel)
   var awardsHtml = '';
@@ -1531,6 +1532,7 @@ function render() {
     + '<div class="ri-meta">'
     +   (gInfo ? '<span class="ri-grp">🏢 Part of <b>' + esc(gInfo.name) + '</b></span>' : '')
     +   '<a class="ri-gzip" href="' + gzipHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 Google + ZIP</a>'
+    +   '<a class="ri-gzip" href="' + ownerHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP + owner to find the owner">👤 Find owner</a>'
     + '</div>'
     + (p.manual ? '<div class="mkt-compact" style="color:var(--orange);background:var(--orange-lt);margin-top:8px;">✏️ Manual match · ZIP ' + esc(p.zip) + (p.market ? ' · ' + esc(p.market) : '') + ' — namedroppers & distances are approximate for the area.</div>' : '')
     + '<div class="ri-chips">'
