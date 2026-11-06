@@ -26,6 +26,25 @@ textarea{min-height:56px;resize:vertical}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .three{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:8px}
 .hint{font-size:12px;color:var(--muted);font-weight:400}
+.btn.play{background:#c2410c;border-color:#c2410c;color:#fff}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.play{background:#ea7a3c;border-color:#ea7a3c;color:#1a1208}}
+:root[data-theme="dark"] .btn.play{background:#ea7a3c;border-color:#ea7a3c;color:#1a1208}
+.playbox{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg);display:flex;flex-direction:column;gap:10px}
+.playbox .checks{display:flex;flex-wrap:wrap;gap:6px}
+.playbox .checks label{flex-direction:row;align-items:center;gap:6px;font-weight:500;color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:4px 10px;background:var(--panel);cursor:pointer;width:auto}
+.playbox .checks input{width:auto;margin:0}
+.dashgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.dcard{border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+.dcard h3{margin:0 0 8px;font:600 11px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--accent)}
+.dcard table{width:100%;border-collapse:collapse;font-size:13px}
+.dcard td,.dcard th{padding:4px 2px;text-align:left;border-bottom:1px solid var(--line)}
+.dcard th{font-size:11px;color:var(--muted);font-weight:600}
+.dcard td.num,.dcard th.num{text-align:right}
+.bar2{height:8px;border-radius:4px;background:var(--accent);opacity:.75}
+.feed{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto;font-size:13px}
+.feed div{line-height:1.4}.feed small{color:var(--muted)}
+.feed button{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:12px;padding:0 4px}
+.tag.played{background:#fde8dc;color:#9a3412;border-color:transparent}
 #sfMsg.warn{color:var(--warn-ink);background:var(--warn);padding:2px 8px;border-radius:6px}
 .sheetbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px;color:var(--muted)}.sheetbar.warn #sheetMsg{color:var(--warn-ink);background:var(--warn);padding:2px 8px;border-radius:6px}
 .hubbar{background:var(--accent-soft);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px}.hubbar b{color:var(--accent)}
@@ -78,7 +97,17 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 .outp{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-height:360px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .outp .head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
 .outp h2{font-family:var(--display);margin:0;font-size:19px}
-.text{white-space:pre-wrap;font-size:14px;line-height:1.6;max-width:78ch}
+.text{font-size:15px;line-height:1.65;max-width:68ch;color:var(--ink)}
+.text .tx-h{font:700 12px var(--body);text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin:22px 0 6px}
+.text .tx-h:first-child{margin-top:4px}
+.text .tx-title{font-family:var(--display);font-size:18px;font-weight:700;margin:0 0 4px}
+.text p{margin:0 0 10px;white-space:pre-wrap}
+.text .tx-lbl{font-weight:700}
+.text .tx-q{margin:10px 0 4px;padding:2px 0 2px 12px;border-left:3px solid var(--accent);font-weight:600}
+.text .tx-dir{color:var(--muted);font-style:italic}
+.text .tx-li{margin:0 0 6px;padding-left:22px;text-indent:-22px}
+.text .tx-sub{background:var(--accent-soft);border-radius:6px;padding:6px 10px;margin:0 0 12px}
+.text hr{border:0;border-top:1px solid var(--line);margin:18px 0}
 .vis{overflow-x:auto}.vis svg{max-width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px}
 .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .warn{background:var(--warn);color:var(--warn-ink);border-radius:8px;padding:8px 10px;font-size:12.5px}
@@ -125,9 +154,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
     <div class="two"><label for="pct">Offer (optional)<select id="pct"><option value="">No offer</option><option value="25">25% off Dinova spend</option><option value="50">50% off Dinova spend</option></select></label><label for="term">Terms and deadline<input id="term" value="through the holidays" placeholder="e.g. through the holidays, if signed by Nov 20"></label></div>
     <span class="hint">Off their Dinova spend. Leave it on No offer and the copy is all value.</span>
   </fieldset>
-  <fieldset><legend>Sender</legend>
-    <div class="two"><label for="seller">Your name<input id="seller" placeholder="e.g. Megan"></label><label for="title">Your title<input id="title" placeholder="e.g. Account Executive"></label></div>
-    <label for="email">Your email<input id="email" placeholder="you@seatedapp.io"></label>
+  <fieldset><legend>Notes</legend>
+    <input type="hidden" id="seller"><input type="hidden" id="title"><input type="hidden" id="email">
     <label for="extra">Anything else to work in<textarea id="extra" placeholder="e.g. has a private room for 40; opening a second location in March"></textarea></label>
   </fieldset>
   <div class="bar"><button type="button" class="btn ghost" id="clear">Clear account</button><span class="hint" id="saved"></span></div>
@@ -135,7 +163,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 <section>
   <div class="kinds" id="kinds" role="group" aria-label="What to build"></div>
   <div class="outp" aria-live="polite">
-    <div class="head"><h2 id="oTitle">Pick what to build</h2><div class="bar"><button class="btn" id="go">Build it</button><button class="btn ghost" id="oStop" hidden>Stop</button><button class="btn ghost" id="oCopy" hidden>Copy</button><button class="btn ghost" id="oSvg" hidden>Download SVG</button><button class="btn ghost" id="oPng" hidden>Download PNG</button></div></div>
+    <div class="head"><h2 id="oTitle">Pick what to build</h2><div class="bar"><button class="btn" id="go">Build it</button><button class="btn ghost" id="oStop" hidden>Stop</button><button class="btn ghost" id="oCopy" hidden>Copy</button><button class="btn ghost" id="oSvg" hidden>Download SVG</button><button class="btn ghost" id="oPng" hidden>Download PNG</button><button class="btn play" id="playBtn" type="button">Play Made!</button></div></div>
+    <div class="playbox" id="playBox" hidden></div>
     <div class="warn" id="oWarn" hidden></div>
     <div class="text" id="oText"></div>
     <div class="vis" id="oVis"></div>
@@ -143,6 +172,12 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   </div>
 </section>
 </div>
+<section class="pipe" id="dash" aria-label="Play dashboard" style="margin-top:16px">
+  <div class="bar" style="justify-content:space-between"><h2>Play dashboard</h2><div class="seg" id="dRange"><button type="button" data-v="today">Today</button><button type="button" data-v="week">This week</button><button type="button" data-v="all">All time</button></div></div>
+  <p class="hint" id="dMsg">Sign in with Google at the top to see plays.</p>
+  <div class="psum" id="dSum"></div>
+  <div class="dashgrid" id="dGrid"></div>
+</section>
 </div>
 <div class="toast" id="toast" hidden></div>
 <script>
@@ -170,7 +205,7 @@ const PLAYS={
 const PORD=['corporate','discount','select','bank','revolut'];
 const CAP={dinova:'Dinova app: corporate cardholders find participating restaurants near the office.',bofa:'Bank of America deals, Food offers: local restaurants with cash back and distance.',revolut:'Revolut Shops, Food & Drink: Seated restaurants with photos, map pins and the reward.'};
 const FIELDS=['biz','contact','role','mkt','hood','cuis','gmv','locs','aov','ndNote','stage','month','play','pct','term','seller','title','email','extra'];
-let ND=[];let HUB_DIN=null;const SHEET={id:'1y9Bl1FyVl7pLYcG4SfZWd2705iP6M0rO_efAzvp1uGs',client:'352874229289-tglifiln7raionffiran3a63p6verre0.apps.googleusercontent.com',scope:'https://www.googleapis.com/auth/spreadsheets.readonly',ok:false,token:null,tc:null,scripts:{},bilt:{}};
+let ND=[];let HUB_DIN=null;var HUB_ACCT=null;const SHEET={id:'1y9Bl1FyVl7pLYcG4SfZWd2705iP6M0rO_efAzvp1uGs',client:'352874229289-tglifiln7raionffiran3a63p6verre0.apps.googleusercontent.com',scope:'https://www.googleapis.com/auth/spreadsheets.readonly',ok:false,token:null,tc:null,scripts:{},bilt:{}};
 const offerLine=()=>{const p=$('#pct').value,t=$('#term').value.trim()||'through the holidays';return p?`${p}% off your Dinova spend ${t}`:''};
 const ofS=(a,b='')=>offerLine()?a+offerLine()+b:'';
 const offerBox=()=>offerLine()||'Last December, Dinova spend at our restaurants ran 34% above October.';
@@ -204,7 +239,7 @@ function load(){let raw=store.get('cb_form',null);if(!raw){raw=JSON.stringify({b
 fillPlays();load();if($('#stage').selectedIndex<0)$('#stage').value='dark';fillPlays();renderMkt();renderND();renderSugg();
 $('#f').addEventListener('input',e=>{if(['pct','term'].includes(e.target.id))fillPlays();if(e.target.id==='ndNote')renderND();save()});
 $('#f').addEventListener('change',e=>{if(e.target.id==='pct')fillPlays();save()});
-$('#clear').onclick=()=>{HUB_DIN=null;$('#hubBar').hidden=true;['biz','contact','role','hood','gmv','aov','ndNote','month','extra'].forEach(k=>$('#'+k).value='');$('#locs').value='1';ND=[];renderND();renderSugg();save();$('#cuis').value='';$('#biz').focus()};
+$('#clear').onclick=()=>{HUB_DIN=null;HUB_ACCT=null;$('#playBox').hidden=true;$('#hubBar').hidden=true;['biz','contact','role','hood','gmv','aov','ndNote','month','extra'].forEach(k=>$('#'+k).value='');$('#locs').value='1';ND=[];renderND();renderSugg();save();$('#cuis').value='';$('#biz').focus()};
 // context
 const up=v=>v>=100000?'$'+Math.floor(v/1000).toLocaleString('en-US')+'K+':v>=1000?'$'+(Math.floor(v/100)/10).toFixed(1).replace(/\.0$/,'')+'K':v?'$'+Math.round(v):'';
 const upA=v=>v>=1000?'$'+Math.round(v*12/1000).toLocaleString('en-US')+'K':'';
@@ -341,12 +376,12 @@ function warn(x){const w=[];if(!$('#biz').value.trim())w.push('Add the business 
  $('#oWarn').hidden=!w.length;$('#oWarn').textContent=w.join(' ')}
 async function go(){fillPlays();const x=ctx();warn(x);const lab=KINDS.find(k=>k[0]===kind)[1];$('#oTitle').textContent=`${lab} · ${x.biz}`;$('#oVis').innerHTML='';$('#oText').textContent='';lastSvg=null;['#oSvg','#oPng','#oCopy'].forEach(s=>$(s).hidden=true);
  if(kind==='onepager'||kind==='card'){const r=(kind==='card'?card:onepager)(x);lastSvg=r.svg;$('#oVis').innerHTML=r.svg;if(r.over)$('#oText').textContent='This is running long. Trim the name-droppers or channels so it fits.';$('#oSvg').hidden=false;$('#oPng').hidden=false;return}
- if(kind==='tp'){lastText=talkingPoints(x);$('#oText').textContent=lastText;$('#oCopy').hidden=false;return}
- if(kind==='hub'){lastText=hub(x);$('#oText').textContent=lastText;$('#oCopy').hidden=false;return}
- if(!SAMPLE){lastText=tmpl(kind,x);$('#oText').textContent=lastText;$('#oCopy').hidden=false;return}
+ if(kind==='tp'){lastText=talkingPoints(x);showText(lastText);$('#oCopy').hidden=false;return}
+ if(kind==='hub'){lastText=hub(x);showText(lastText);$('#oCopy').hidden=false;return}
+ if(!SAMPLE){lastText=tmpl(kind,x);showText(lastText);$('#oCopy').hidden=false;return}
  ctl?.abort();ctl=new AbortController();$('#oText').textContent='Writing…';$('#oStop').hidden=false;$('#go').disabled=true;
- try{const {text}=await SAMPLE(RULES()+'\n\nFACTS\n'+facts(x)+'\n\nTASK\n'+ASK[kind](x),{signal:ctl.signal,cache:false,onText:({text})=>{$('#oText').textContent=text}});lastText=text;$('#oCopy').hidden=false}
- catch(e){if(e.code==='cancelled'){lastText=e.text||'';if(lastText)$('#oCopy').hidden=false}else if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(e.code)){SAMPLE=null;setMode();lastText=tmpl(kind,x);$('#oText').textContent=lastText;$('#oCopy').hidden=false}else{lastText=tmpl(kind,x);$('#oText').textContent=lastText;$('#oCopy').hidden=false;toast(e.code==='rate_limited'?'Claude is busy right now; showing the template.':'Claude could not finish; showing the template.')}}
+ try{const {text}=await SAMPLE(RULES()+'\n\nFACTS\n'+facts(x)+'\n\nTASK\n'+ASK[kind](x),{signal:ctl.signal,cache:false,onText:({text})=>{showText(text)}});lastText=text;$('#oCopy').hidden=false}
+ catch(e){if(e.code==='cancelled'){lastText=e.text||'';if(lastText)$('#oCopy').hidden=false}else if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(e.code)){SAMPLE=null;setMode();lastText=tmpl(kind,x);showText(lastText);$('#oCopy').hidden=false}else{lastText=tmpl(kind,x);showText(lastText);$('#oCopy').hidden=false;toast(e.code==='rate_limited'?'Claude is busy right now; showing the template.':'Claude could not finish; showing the template.')}}
  finally{$('#oStop').hidden=true;$('#go').disabled=false}}
 $('#go').onclick=go;$('#oStop').onclick=()=>ctl?.abort();
 $('#oCopy').onclick=async()=>{try{await navigator.clipboard.writeText(lastText);toast('Copied')}catch(e){const ta=document.createElement('textarea');ta.value=lastText;ta.style.cssText='position:fixed;left:16px;right:16px;bottom:60px;height:140px;z-index:30';document.body.appendChild(ta);ta.select();toast('Press Ctrl/Cmd+C to copy');setTimeout(()=>ta.remove(),9000)}};
@@ -354,6 +389,25 @@ const fname=()=>`${($('#biz').value.trim()||'account').replace(/[^\w\- ]+/g,'').
 async function saveFile(name,data,ext){if(!DL){try{const u=URL.createObjectURL(data instanceof Blob?data:new Blob([data],{type:'image/svg+xml'}));const a=document.createElement('a');a.href=u;a.download=name+'.'+ext;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}catch(e){toast('Could not save that file here.')}return}try{await DL.save({filename:name+'.'+ext,data});toast('Saved')}catch(e){if(e.code!=='declined')toast('Could not save that file here.')}}
 $('#oSvg').onclick=()=>lastSvg&&saveFile(fname(),lastSvg,'svg');
 $('#oPng').onclick=()=>{if(!lastSvg)return;const im=new Image();const u=URL.createObjectURL(new Blob([lastSvg],{type:'image/svg+xml'}));im.onload=()=>{const c=document.createElement('canvas');c.width=im.width*2;c.height=im.height*2;const g=c.getContext('2d');g.scale(2,2);g.drawImage(im,0,0);URL.revokeObjectURL(u);c.toBlob(b=>b&&saveFile(fname(),b,'png'),'image/png')};im.src=u};
+
+// Readable output: headings, labels, quotes and [directions] styled; Copy still copies the plain text
+function showText(t){const el=$('#oText');t=String(t||'');
+ const dir=h=>h.replace(/\[([^\]\n]{1,240})\]/g,'<span class="tx-dir">[$1]</span>');
+ const blocks=t.replace(/\r/g,'').split(/\n{2,}/);let out='',first=true;
+ for(const b of blocks){const lines=b.split('\n');
+  for(let i=0;i<lines.length;i++){const raw=lines[i],L=raw.trim();if(!L)continue;const e=esc(L);
+   if(/^[-—–]{1,3}$/.test(L)){out+='<hr>';continue}
+   if(first&&/^(Talking points|Call script|Script)\b/i.test(L)){out+=`<div class="tx-title">${e}</div>`;first=false;continue}
+   first=false;
+   if(/^["“]?[A-Z0-9][A-Z0-9 '’"“”?&\/()\-]{2,48}$/.test(L)&&/[A-Z]{3}/.test(L)&&!/[a-z]/.test(L)){out+=`<div class="tx-h">${e}</div>`;continue}
+   if(/^(Email|Text) \d+( \([^)]*\))?:?$/.test(L)||(/^[A-Z][^.:!?]{1,40}:$/.test(L))){out+=`<div class="tx-h">${esc(L.replace(/:$/,''))}</div>`;continue}
+   if(/^Subject:/i.test(L)){out+=`<div class="tx-sub"><span class="tx-lbl">Subject:</span>${e.slice(8)}</div>`;continue}
+   if(/^["“][^"”]{2,200}["”]$/.test(L)){out+=`<div class="tx-q">${e}</div>`;continue}
+   if(/^\d+\.\s/.test(L)){out+=`<div class="tx-li">${dir(e)}</div>`;continue}
+   const m=L.match(/^([A-Z][^.:!?\n"“]{0,32}):\s+(.+)$/);
+   if(m&&!/^(https?|Note)$/i.test(m[1])){out+=`<p><span class="tx-lbl">${esc(m[1])}:</span> ${dir(esc(m[2]))}</p>`;continue}
+   out+=`<p>${dir(e)}</p>`}}
+ el.innerHTML=out||''}
 function setMode(){$('#mode').textContent=SAMPLE?'Text is written by Claude on your account each time you click Build it. Visuals are drawn from your inputs.':'Text uses built-in templates filled with your inputs. '}
 setMode();go();
 
@@ -381,7 +435,7 @@ async function loadSheet(){if(!SHEET.token){sheetMsg('Sign in with your Seated G
    ((NDM[m]=NDM[m]||{})[hd]=NDM[m][hd]||[]).push([g('Account Name'),ci,tier,Math.round(num(g('GMV (Last 30)'))/1000)])})}
   SHEET.scripts={};scr.forEach(r=>{if(r[0])SHEET.scripts[String(r[0]).trim()]=String(r[1]??'')});
   SHEET.bilt={};if(bil.length){const H=cmap(bil[0]);bil.slice(1).forEach(r=>{const m=String(r[H['Market']]||'').trim();if(m)SHEET.bilt[m]=String(r[H['SAFE Line (operator-only)']]||'').trim()})}
-  SHEET.ok=true;const cu=$('#cuis').value;$('#cuis').innerHTML='<option value="">Any cuisine</option>'+[...new Set(CU.filter(Boolean))].sort().map(c=>`<option>${esc(c)}</option>`).join('');$('#cuis').value=cu;
+  SHEET.ok=true;loadPlays();const cu=$('#cuis').value;$('#cuis').innerHTML='<option value="">Any cuisine</option>'+[...new Set(CU.filter(Boolean))].sort().map(c=>`<option>${esc(c)}</option>`).join('');$('#cuis').value=cu;
   fillMkts();renderMkt();renderSugg();
   sheetMsg(`Using the Cold Call Hub sheet: ${Object.keys(MK).filter(k=>MK[k].mem).length} markets, ${Object.values(NDM).reduce((t,h)=>t+Object.values(h).reduce((a,l)=>a+l.length,0),0)} name-droppers${Object.keys(SHEET.scripts).length?', live call script':''}.`);
   if(kind==='tp'&&lastText)go()}
@@ -452,9 +506,67 @@ When you call back, don't ask "did you see my email?" Say "Do you have your phon
 MINDSET
 You're here to help. It matters that they get set up now, and if you mean that, it comes across.${x.extra?'\n\nYOUR NOTES\n'+x.extra:''}`}
 
+// Play Made! (logs to the "Play Made Log" Google Sheet with each rep's own Google sign-in; nothing public)
+const LOG_ID='1PJZDvwb7NFARHtKEp1tDs6g-lIE8y2Yh9uiP-tR1dJk',RW_SCOPE='https://www.googleapis.com/auth/spreadsheets openid email profile';
+const PK=[['exec','CRO note'],['email','Email'],['seq','Email sequence'],['sms','Texts'],['call','Call'],['li','LinkedIn / IG DM'],['onepager','One-pager'],['card','Offer card'],['other','Other']],PKL=Object.fromEntries(PK);
+var RW=null,RW_TC=null,ME={email:'',name:''},PLAYROWS=[],PLAY_BUSY=false,PLAY_TIMER=null,dRange=store.get('cb_dRange','week');
+try{const a=JSON.parse(localStorage.getItem('seated_ccb_rw')||'null');if(a&&a.accessToken&&a.expiresAt>Date.now()){RW=a.accessToken;ME={email:a.email||'',name:a.name||''}}}catch(e){}
+const readTok=()=>RW||SHEET.token;
+function curAcct(){const biz=$('#biz').value.trim();if(!biz)return null;const id=(HUB_ACCT&&HUB_ACCT.name===biz)?HUB_ACCT.id:'';return {key:id||('n:'+biz.toLowerCase()),id,biz,mkt:$('#mkt').value}}
+function plays(){const undone=new Set(PLAYROWS.filter(r=>r.act==='undo').map(r=>r.pid+'|'+r.email));return PLAYROWS.filter(r=>r.act==='play'&&!undone.has(r.pid+'|'+r.email)).sort((a,b)=>b.t<a.t?-1:1)}
+async function loadPlays(){const tok=readTok();if(!tok){$('#dMsg').textContent='Sign in with Google at the top to see the play dashboard.';return}
+ try{const r=await fetch('https://sheets.googleapis.com/v4/spreadsheets/'+LOG_ID+'/values/'+encodeURIComponent('A2:J')+'?majorDimension=ROWS',{headers:{Authorization:'Bearer '+tok}});
+  if(r.status===401){if(tok===RW){RW=null;try{localStorage.removeItem('seated_ccb_rw')}catch(e){}}$('#dMsg').textContent='Your Google sign-in expired. Sign in again to see plays.';return}
+  if(r.status===403||r.status===404){$('#dMsg').textContent='You don\u2019t have access to the Play Made Log yet. Ask James to share it with you.';return}
+  if(!r.ok)throw new Error('log '+r.status);
+  PLAYROWS=((await r.json()).values||[]).map(v=>({t:v[0]||'',email:(v[1]||'').toLowerCase(),name:v[2]||'',act:(v[3]||'').toLowerCase(),pid:v[4]||'',acct:v[5]||('n:'+String(v[6]||'').toLowerCase()),biz:v[6]||'',mkt:v[7]||'',k:String(v[8]||'').split(',').map(x=>x.trim()).filter(Boolean)})).filter(x=>x.t&&x.pid);
+  renderDash()}
+ catch(e){$('#dMsg').textContent='Couldn\u2019t load plays just now. They\u2019ll refresh in a minute.'}
+ clearTimeout(PLAY_TIMER);PLAY_TIMER=setTimeout(()=>{if(!document.hidden)loadPlays();else PLAY_TIMER=setTimeout(loadPlays,60000)},60000)}
+function getRW(){return new Promise(async(ok,no)=>{if(RW)return ok(RW);try{await gsi()}catch(e){return no(new Error('gsi'))}
+ RW_TC=RW_TC||google.accounts.oauth2.initTokenClient({client_id:SHEET.client,scope:RW_SCOPE,hd:'seatedapp.io',callback:()=>{}});
+ RW_TC.callback=async r=>{if(!r||!r.access_token)return no(new Error('denied'));RW=r.access_token;
+  try{const u=await (await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:'Bearer '+RW}})).json();ME={email:String(u.email||'').toLowerCase(),name:u.name||''}}catch(e){}
+  try{localStorage.setItem('seated_ccb_rw',JSON.stringify({accessToken:RW,expiresAt:Date.now()+((+r.expires_in||3600)-120)*1000,email:ME.email,name:ME.name}))}catch(e){}ok(RW)};
+ RW_TC.requestAccessToken({prompt:''})})}
+async function appendRow(row){const go=()=>fetch('https://sheets.googleapis.com/v4/spreadsheets/'+LOG_ID+'/values/'+encodeURIComponent('A1:J1')+':append?valueInputOption=RAW&insertDataOption=INSERT_ROWS',{method:'POST',headers:{Authorization:'Bearer '+RW,'Content-Type':'application/json'},body:JSON.stringify({values:[row]})});
+ let r=await go();if(r.status===401){RW=null;try{localStorage.removeItem('seated_ccb_rw')}catch(e){}await getRW();r=await go()}
+ if(r.status===403)throw Object.assign(new Error('forbidden'),{code:403});if(!r.ok)throw new Error('append '+r.status)}
+function openPlay(){const box=$('#playBox');if(!box.hidden){box.hidden=true;return}const a=curAcct();if(!a){toast('Add the business name first.');return}
+ const prior=plays().filter(p=>p.acct===a.key);
+ box.innerHTML=`<div><b>What did you send to ${esc(a.biz)}?</b>${prior.length?` <span class="hint">· ${prior.length} play${prior.length>1?'s':''} already logged on this account</span>`:''}</div><div class="checks">${PK.map(([k,l])=>`<label><input type="checkbox" value="${k}"${k===kind?' checked':''}>${esc(l)}</label>`).join('')}</div><div class="bar"><button class="btn play" type="button" id="playLog">Log play</button><button class="btn ghost" type="button" id="playCancel">Cancel</button>${RW?'':'<span class="hint">The first time, Google asks you to allow logging to the Play Made Log.</span>'}</div>`;
+ box.hidden=false;$('#playCancel').onclick=()=>{box.hidden=true};$('#playLog').onclick=()=>logPlay(a)}
+async function logPlay(a){if(PLAY_BUSY)return;const ks=[...$$('#playBox input:checked')].map(i=>i.value);if(!ks.length){toast('Pick what you sent.');return}
+ PLAY_BUSY=true;$('#playLog').disabled=true;
+ try{await getRW();const pid=Date.now().toString(36)+Math.random().toString(36).slice(2,6),t=new Date().toISOString();
+  await appendRow([t,ME.email,ME.name,'play',pid,a.id,a.biz.slice(0,120),a.mkt,ks.join(', '),'collateral-builder']);
+  PLAYROWS.push({t,email:ME.email,name:ME.name,act:'play',pid,acct:a.key,biz:a.biz,mkt:a.mkt,k:ks});renderDash();$('#playBox').hidden=true;toast('Play logged for '+a.biz+' \u2713');loadPlays()}
+ catch(e){toast(e.code===403?'You can\u2019t write to the Play Made Log yet. Ask James to share it with you as an editor.':e.message==='denied'?'Google sign-in was cancelled, so the play wasn\u2019t logged.':'Couldn\u2019t log that play. Try again.')}
+ finally{PLAY_BUSY=false;const b=$('#playLog');if(b)b.disabled=false}}
+async function undoPlay(pid){if(PLAY_BUSY)return;PLAY_BUSY=true;try{await getRW();const p=plays().find(x=>x.pid===pid&&x.email===ME.email);if(!p)return;
+ await appendRow([new Date().toISOString(),ME.email,ME.name,'undo',pid,'',p.biz,p.mkt,'','collateral-builder']);PLAYROWS.push({t:new Date().toISOString(),email:ME.email,act:'undo',pid});renderDash();toast('Play removed')}
+ catch(e){toast('Couldn\u2019t remove that play. Try again.')}finally{PLAY_BUSY=false}}
+function inRange(t){const d=new Date(t),n=new Date();if(dRange==='all')return true;if(dRange==='today')return d.toDateString()===n.toDateString();const w=new Date(n);w.setHours(0,0,0,0);w.setDate(w.getDate()-((w.getDay()+6)%7));return d>=w}
+function renderDash(){$$('#dRange button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===dRange));
+ const all=plays(),ps=all.filter(p=>inRange(p.t));const who=p=>p.name||p.email.split('@')[0]||'Someone';
+ $('#dMsg').textContent=all.length?'Click Play Made! after you send something. Everyone at Seated sees the same dashboard.':'No plays logged yet. Load an account, send something, then click Play Made!';
+ const accts=new Set(ps.map(p=>p.acct)),people=new Set(ps.map(p=>p.email)),touches=ps.reduce((t,p)=>t+p.k.length,0);
+ $('#dSum').innerHTML=`<span><b>${ps.length}</b> plays</span><span><b>${accts.size}</b> accounts</span><span><b>${touches}</b> pieces sent</span><span><b>${people.size}</b> reps playing</span>`;
+ const by={};ps.forEach(p=>{const k=p.email;(by[k]=by[k]||{p,n:0,a:new Set(),k:{}}).n++;by[k].a.add(p.acct);p.k.forEach(x=>by[k].k[x]=(by[k].k[x]||0)+1)});
+ const lb=Object.values(by).sort((a,b)=>b.a.size-a.a.size||b.n-a.n);const types={};ps.forEach(p=>p.k.forEach(x=>types[x]=(types[x]||0)+1));const tmax=Math.max(1,...Object.values(types));
+ const top=o=>{const e=Object.entries(o).sort((a,b)=>b[1]-a[1])[0];return e?PKL[e[0]]||e[0]:''};
+ const rel=t=>{const m=Math.round((Date.now()-new Date(t))/6e4);return m<1?'just now':m<60?m+'m ago':m<1440?Math.round(m/60)+'h ago':new Date(t).toLocaleDateString('en-US',{month:'short',day:'numeric'})};
+ $('#dGrid').innerHTML=`<div class="dcard"><h3>Leaderboard</h3>${lb.length?`<table><tr><th>Rep</th><th class="num">Accounts</th><th class="num">Plays</th><th>Most sent</th></tr>${lb.map((r,i)=>`<tr><td>${i<3?['🥇','🥈','🥉'][i]+' ':''}${esc(who(r.p))}${ME.email&&r.p.email===ME.email?' <small>(you)</small>':''}</td><td class="num">${r.a.size}</td><td class="num">${r.n}</td><td>${esc(top(r.k))}</td></tr>`).join('')}</table>`:'<p class="hint">No plays in this range.</p>'}</div>
+ <div class="dcard"><h3>What's being sent</h3>${Object.keys(types).length?`<table>${Object.entries(types).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr><td style="width:40%">${esc(PKL[k]||k)}</td><td><div class="bar2" style="width:${Math.max(4,Math.round(n/tmax*100))}%"></div></td><td class="num" style="width:36px">${n}</td></tr>`).join('')}</table>`:'<p class="hint">Nothing yet.</p>'}</div>
+ <div class="dcard"><h3>Recent plays</h3><div class="feed">${ps.slice(0,40).map(p=>`<div><b>${esc(who(p))}</b> sent ${esc(p.k.map(x=>PKL[x]||x).join(', '))} to <b>${esc(p.biz)}</b>${p.mkt?' <small>· '+esc(p.mkt)+'</small>':''} <small>· ${rel(p.t)}</small>${ME.email&&p.email===ME.email?` <button type="button" data-undo="${esc(p.pid)}">undo</button>`:''}</div>`).join('')||'<p class="hint">No plays in this range.</p>'}</div></div>`;
+ $$('#dGrid [data-undo]').forEach(b=>b.onclick=()=>undoPlay(b.dataset.undo))}
+$$('#dRange button').forEach(b=>b.onclick=()=>{dRange=b.dataset.v;store.set('cb_dRange',dRange);renderDash()});
+$('#playBtn').onclick=openPlay;
+
 // Cold Call Hub hand-off: the hub links here with #hub=<json>
 function applyHub(){const m=location.hash.match(/^#hub=(.+)$/);if(!m)return;let d;try{d=JSON.parse(decodeURIComponent(m[1]))}catch(e){return}
  if(!d||typeof d!=='object'||!d.name)return;
+ HUB_ACCT={id:String(d.id||'').slice(0,40),name:String(d.name).slice(0,120)};
  $('#biz').value=String(d.name).slice(0,120);$('#contact').value='';$('#role').value='';
  const mk=String(d.market||'').slice(0,60);if(mk&&![...$('#mkt').options].some(o=>o.value===mk)){const o=document.createElement('option');o.value=mk;o.textContent=mk;$('#mkt').appendChild(o)}$('#mkt').value=mk;$('#hood').value=String(d.hood||'').slice(0,80);
  $('#cuis').value=CU.includes(d.cuisine)?d.cuisine:'';$('#locs').value=String(Math.max(1,Math.round(+d.locs||1)));$('#aov').value='';$('#ndNote').value='';$('#extra').value='';$('#month').value='';
@@ -467,7 +579,7 @@ function applyHub(){const m=location.hash.match(/^#hub=(.+)$/);if(!m)return;let 
  const bar=$('#hubBar');bar.hidden=false;bar.innerHTML=`Filled from the Cold Call Hub: <b>${esc(d.name)}</b>${d.market?' · '+esc(d.market):''}${g>0?` · $${Math.round(g).toLocaleString('en-US')}/mo predicted`:' · no revenue prediction'}${ND.length?' · name-droppers: '+esc(ND.join(', ')):''}. Add the contact's name, check the history, then pick what to build.`;
  history.replaceState(null,'',location.pathname+location.search);go()}
 applyHub();window.addEventListener('hashchange',applyHub);
-SHEET.token=storedToken();loadSheet();
+SHEET.token=storedToken()||RW;loadSheet();
 (async()=>{if(!window.claude?.use)return;const [sm,d]=await Promise.all(['sample','downloads'].map(n=>claude.use(n).catch(()=>null)));SAMPLE=sm;DL=d;setMode();if(lastSvg&&DL){$('#oSvg').hidden=false;$('#oPng').hidden=false}})();
 </script>
 
