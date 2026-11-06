@@ -1494,6 +1494,15 @@ function render() {
   var gzipHref = 'https://www.google.com/search?q=' + encodeURIComponent((p.name || '') + (p.zip ? ' ' + p.zip : (p.market ? ' ' + p.market : '')));
   var gzipLink = '<a class="chip chip-glink" href="' + gzipHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 G/ZIP</a>';
   var ownerHref = 'https://www.google.com/search?q=' + encodeURIComponent((p.name || '') + (p.zip ? ' ' + p.zip : (p.market ? ' ' + p.market : '')) + ' owner');
+  // Collateral Builder hand-off: everything the builder needs rides in the link's #hash (never sent to a server).
+  var ccbND = [], ccbSeen = {};
+  (nd.best || []).concat(nd.nearest || []).forEach(function(x) { var n = x && x.name; if (n && !ccbSeen[n] && ccbND.length < 3) { ccbSeen[n] = 1; ccbND.push(n); } });
+  var ccbHref = 'collateral.html#hub=' + encodeURIComponent(JSON.stringify({
+    v: 1, id: p.id || '', name: p.name || '', market: p.market || '', hood: p.neighborhood || '', cuisine: p.cuisine || '',
+    gmv: (gInfo && gInfo.total > 1 && gInfo.revTotal != null) ? gInfo.revTotal : ((p.id && revOf(p.id) != null) ? revOf(p.id) : null),
+    locs: (gInfo && gInfo.total > 1 && gInfo.revTotal != null) ? gInfo.total : 1,
+    nd: ccbND, dinOne: (nd.dinova && nd.dinova.insert) || '', dinova: (nd.dinova && nd.dinova.show) || [], status: p.status || ''
+  }));
 
   // Awards callout — accolades the prospect has earned (credibility / opener fuel)
   var awardsHtml = '';
@@ -1533,6 +1542,7 @@ function render() {
     +   (gInfo ? '<span class="ri-grp">🏢 Part of <b>' + esc(gInfo.name) + '</b></span>' : '')
     +   '<a class="ri-gzip" href="' + gzipHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP for its info tile">🔎 Google + ZIP</a>'
     +   '<a class="ri-gzip" href="' + ownerHref + '" target="_blank" rel="noopener" title="Google this restaurant + ZIP + owner to find the owner">👤 Find owner</a>'
+    +   '<a class="ri-gzip" href="' + ccbHref + '" target="_blank" rel="noopener" title="Open the Collateral Builder filled in with this restaurant">✉️ Build collateral</a>'
     + '</div>'
     + (p.manual ? '<div class="mkt-compact" style="color:var(--orange);background:var(--orange-lt);margin-top:8px;">✏️ Manual match · ZIP ' + esc(p.zip) + (p.market ? ' · ' + esc(p.market) : '') + ' — namedroppers & distances are approximate for the area.</div>' : '')
     + '<div class="ri-chips">'
