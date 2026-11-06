@@ -122,6 +122,18 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   <div class="sheetbar" id="sheetBar"><span id="sheetMsg">Connecting to the Cold Call Hub sheet…</span><button type="button" class="btn ghost" id="sheetBtn" hidden>Sign in with Google</button></div>
 </header>
 <div class="hubbar" id="hubBar" hidden></div>
+<section class="pipe" id="pipe" aria-label="Salesforce pipeline">
+  <div class="bar" style="justify-content:space-between"><h2>Your pipeline</h2><span class="hint" id="sfMsg">Sign in with Google at the top to load your pipeline.</span><button type="button" class="btn ghost" id="sfRetry" hidden>Try again</button></div>
+  <div class="ptools">
+    <label for="sfRep">Rep<select id="sfRep" disabled><option value="">Loading reps…</option></select></label>
+    <div><span class="hint">Show</span><div class="seg" id="pShow"><button type="button" data-v="open">Open</button><button type="button" data-v="lost">Lost since Aug</button><button type="button" data-v="all">Both</button></div></div>
+    <div><span class="hint">Group by</span><div class="seg" id="pGroup"><button type="button" data-v="priority">Priority</button><button type="button" data-v="status">Status</button><button type="button" data-v="demo">Held or missed</button><button type="button" data-v="age">Time open</button></div></div>
+    <label for="pFind">Find<input id="pFind" placeholder="Restaurant or market"></label>
+  </div>
+  <div class="psum" id="pSum"></div>
+  <div class="ptable" id="pTable" hidden></div>
+  <div class="pnote" id="pNote" hidden></div>
+</section>
 <div class="grid">
 <form class="side" id="f" autocomplete="off">
   <fieldset><legend>The account</legend>
@@ -205,7 +217,7 @@ const PLAYS={
 const PORD=['corporate','discount','select','bank','revolut'];
 const CAP={dinova:'Dinova app: corporate cardholders find participating restaurants near the office.',bofa:'Bank of America deals, Food offers: local restaurants with cash back and distance.',revolut:'Revolut Shops, Food & Drink: Seated restaurants with photos, map pins and the reward.'};
 const FIELDS=['biz','contact','role','mkt','hood','cuis','gmv','locs','aov','ndNote','stage','month','play','pct','term','seller','title','email','extra'];
-let ND=[];let HUB_DIN=null;var HUB_ACCT=null;const SHEET={id:'1y9Bl1FyVl7pLYcG4SfZWd2705iP6M0rO_efAzvp1uGs',client:'352874229289-tglifiln7raionffiran3a63p6verre0.apps.googleusercontent.com',scope:'https://www.googleapis.com/auth/spreadsheets.readonly',ok:false,token:null,tc:null,scripts:{},bilt:{}};
+let ND=[];let HUB_DIN=null;var HUB_ACCT=null;var PK_SET=new Set();const SHEET={id:'1y9Bl1FyVl7pLYcG4SfZWd2705iP6M0rO_efAzvp1uGs',client:'352874229289-tglifiln7raionffiran3a63p6verre0.apps.googleusercontent.com',scope:'https://www.googleapis.com/auth/spreadsheets.readonly',ok:false,token:null,tc:null,scripts:{},bilt:{}};
 const offerLine=()=>{const p=$('#pct').value,t=$('#term').value.trim()||'through the holidays';return p?`${p}% off your Dinova spend ${t}`:''};
 const ofS=(a,b='')=>offerLine()?a+offerLine()+b:'';
 const offerBox=()=>offerLine()||'Last December, Dinova spend at our restaurants ran 34% above October.';
@@ -435,7 +447,7 @@ async function loadSheet(){if(!SHEET.token){sheetMsg('Sign in with your Seated G
    ((NDM[m]=NDM[m]||{})[hd]=NDM[m][hd]||[]).push([g('Account Name'),ci,tier,Math.round(num(g('GMV (Last 30)'))/1000)])})}
   SHEET.scripts={};scr.forEach(r=>{if(r[0])SHEET.scripts[String(r[0]).trim()]=String(r[1]??'')});
   SHEET.bilt={};if(bil.length){const H=cmap(bil[0]);bil.slice(1).forEach(r=>{const m=String(r[H['Market']]||'').trim();if(m)SHEET.bilt[m]=String(r[H['SAFE Line (operator-only)']]||'').trim()})}
-  SHEET.ok=true;loadPlays();const cu=$('#cuis').value;$('#cuis').innerHTML='<option value="">Any cuisine</option>'+[...new Set(CU.filter(Boolean))].sort().map(c=>`<option>${esc(c)}</option>`).join('');$('#cuis').value=cu;
+  SHEET.ok=true;loadPlays();loadPipeline();const cu=$('#cuis').value;$('#cuis').innerHTML='<option value="">Any cuisine</option>'+[...new Set(CU.filter(Boolean))].sort().map(c=>`<option>${esc(c)}</option>`).join('');$('#cuis').value=cu;
   fillMkts();renderMkt();renderSugg();
   sheetMsg(`Using the Cold Call Hub sheet: ${Object.keys(MK).filter(k=>MK[k].mem).length} markets, ${Object.values(NDM).reduce((t,h)=>t+Object.values(h).reduce((a,l)=>a+l.length,0),0)} name-droppers${Object.keys(SHEET.scripts).length?', live call script':''}.`);
   if(kind==='tp'&&lastText)go()}
@@ -506,6 +518,125 @@ When you call back, don't ask "did you see my email?" Say "Do you have your phon
 MINDSET
 You're here to help. It matters that they get set up now, and if you mean that, it comes across.${x.extra?'\n\nYOUR NOTES\n'+x.extra:''}`}
 
+// Salesforce pipeline report (each viewer's own Salesforce MCP connector)
+const SF_SERVER='Salesforce MCP',SF_TOOL='soqlQueryplatform_sobject_reads',LOST_SINCE='2026-08-01';let MCP=null,SF_ROWS=[],SF_SEL='';
+const pv={show:store.get('cb_pShow','open'),group:store.get('cb_pGroup2','priority'),sort:'score',dir:-1};
+const STAGE_ORDER=['Verbal Commitment','Order Form Sent','Negotiation','Product Evaluation','Setting up Direct','In Development','Aggregator Publisher Review','Following Up','On Hold - Interested','Hold','Demo Scheduled','Meeting Scheduled','Scheduling','Missed (Actively Rescheduling)','Follow-up Missed','Expressed Interest','Prospecting'];
+const MISSED_ST=['Missed (Actively Rescheduling)','Follow-up Missed'],SCHED_ST=['Demo Scheduled','Meeting Scheduled'];
+const LOSS={'Unable to Schedule - Marketing Opp':'Unable to schedule','Missed Meeting':'Missed meeting','Pitched, cannot get in touch again':'Pitched, ghosted','Could not reach decision maker':'Pitched non-DM, couldn\u2019t reach DM','Pitched GM, Owner said No':'Pitched non-DM, DM said no','Pricing too high':'Pricing too high','Not comfortable giving billing info':'Not comfortable giving billing info','Setup not a fit (pre-pay, assigned seats, etc.)':'Business model not a fit','InKind Partner':'Works with competitor','Timing too far out':'Timing too far out','Not fit for Seated brand':'Not fit for Seated brand','Dining rewards not focus':'Dining rewards not focus','Approaching via aggregator':'Approaching via aggregator','Too small':'Too small','Timing not right':'Timing not right','Staffing concerns':'Staffing concerns','Rewards Network Partner':'Rewards Network partner','Wanted Customizable Tip Amount':'Wanted customizable tip','Cannibalization':'Cannibalization'};
+const LOSS_ST={'Missed Meeting':'noshow','Unable to Schedule - Marketing Opp':'unsched','Pitched, cannot get in touch again':'dark','Could not reach decision maker':'dark','Pitched GM, Owner said No':'owner','Pricing too high':'pricing','Timing not right':'timing','Timing too far out':'timing'};
+const OPEN_ST={'Missed (Actively Rescheduling)':'noshow','Follow-up Missed':'noshow','Following Up':'dark','On Hold - Interested':'dark','Hold':'dark','Order Form Sent':'open','Negotiation':'open','Verbal Commitment':'open','Product Evaluation':'open','Setting up Direct':'open','In Development':'open','Aggregator Publisher Review':'open','Demo Scheduled':'upcoming','Meeting Scheduled':'upcoming','Scheduling':'unsched','Expressed Interest':'unsched','Prospecting':'unsched'};
+const plain=h=>{if(!h)return '';const d=new DOMParser().parseFromString(String(h).replace(/<\/(p|div|li)>|<br\s*\/?>/gi,'$&\n'),'text/html');return (d.body.textContent||'').replace(/\n{3,}/g,'\n\n').trim()};let NOTE_CTL=null;
+const DAY=864e5,today=()=>{const d=new Date();d.setHours(12,0,0,0);return d},dt=v=>v?new Date(String(v).slice(0,10)+'T12:00:00'):null;
+const fmtD=d=>d?d.toLocaleDateString('en-US',{month:'short',day:'numeric'}):'',money=v=>v?'$'+Math.round(v).toLocaleString('en-US'):'';
+const sfMsg=(t,warn,retry)=>{$('#sfMsg').textContent=t;$('#sfMsg').classList.toggle('warn',!!warn);$('#sfRetry').hidden=!retry};
+function sfErr(e){const c=e?.code;
+ if(c==='needs_reauth')return sfMsg('Your Salesforce connection expired. Reconnect Salesforce MCP in claude.ai Settings → Connectors, then reload.',true);
+ if(c==='server_not_connected')return sfMsg('Add the Salesforce MCP connector in claude.ai Settings → Connectors to see your pipeline.',true);
+ if(c==='selection_required')return sfMsg('Choose which Salesforce connection to use when claude.ai asks, then try again.',true,true);
+ if(c==='not_in_manifest'||c==='approval_required')return sfMsg('This page needs your OK to read Salesforce.',true,true);
+ if(c==='blocked_by_policy')return sfMsg('Your organization blocks Salesforce here. Fill the form in by hand.',true);
+ if(c==='tool_error')return sfMsg('Salesforce returned an error: '+(e.message||'unknown'),true,true);
+ if(c==='cancelled')return;
+ sfMsg('Could not reach Salesforce just now.',true,true)}
+var SNAP=null,SNAP_ROWS=[],asOfTxt='';
+function initSnap(d){SNAP=d;SNAP_ROWS=SNAP.rows.map(r=>({Id:r[0],AccountId:r[1],OwnerId:r[2],StageName:r[3],CreatedDate:r[4],CloseDate:r[5],LastActivityDate:r[6]||null,Held__c:!!r[7],Date_Held__c:r[8]||null,Times_Rescheduled__c:r[9],Loss_Reason__c:r[10]||null,Account:{Name:r[11],Seated_Market__c:r[12]||null,Neighborhood__c:r[13]||null,Primary_Cuisine__c:r[14]||null,Monthly_Revenue_Prediction__c:r[15]||null,Group_Locations__c:r[16]||0},OpportunityContactRoles:{records:[{Contact:{FirstName:r[17]||'',Title:r[18]||''}}]}}));
+asOfTxt=new Date(SNAP.asOf+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function sfReps(){const n={};SNAP_ROWS.forEach(o=>{n[o.OwnerId]=(n[o.OwnerId]||0)+(o.StageName!=='Closed Lost'?1:0)});
+ const ids=Object.keys(SNAP.owners).sort((a,b)=>SNAP.owners[a].localeCompare(SNAP.owners[b]));const last=store.get('cb_sfRep','');
+ $('#sfRep').innerHTML='<option value="">Pick yourself</option>'+ids.map(id=>`<option value="${esc(id)}">${esc(SNAP.owners[id])} (${n[id]||0} open)</option>`).join('');$('#sfRep').disabled=false;
+ if(last&&SNAP.owners[last]){$('#sfRep').value=last;sfLoad()}else sfMsg(`Salesforce snapshot from ${asOfTxt}. Pick yourself to see your pipeline.`)}
+
+const LATE=['Verbal Commitment','Order Form Sent','Negotiation','Product Evaluation','Setting up Direct','In Development','Aggregator Publisher Review'];
+const ST_PTS={'Following Up':22,'On Hold - Interested':18,'Hold':8,'Demo Scheduled':18,'Meeting Scheduled':18,'Missed (Actively Rescheduling)':18,'Follow-up Missed':10,'Scheduling':8,'Expressed Interest':8,'Prospecting':6};
+const LOSS_PTS={'Timing not right':22,'Timing too far out':18,'Missed Meeting':18,'Pitched, cannot get in touch again':16,'Pitched GM, Owner said No':14,'Could not reach decision maker':14,'Pricing too high':14,'Unable to Schedule - Marketing Opp':10};
+function score(r){const why=[];let s=0;const t=today();
+ const v=r.gmv?Math.min(30,r.gmv/400):6;s+=v;if(r.gmv>=8000)why.push(money(r.gmv)+'/mo upside');else if(!r.gmv)why.push('no revenue estimate');
+ if(r.lost){const lp=LOSS_PTS[r.loss]??2;s+=lp;if(lp>=16)why.push(r.loss.startsWith('Timing')?'timing objection, holidays fix it':r.loss==='Missed Meeting'?'never got the pitch':'went quiet after pitch');else if(lp<=2)why.push('lost for a hard reason');
+  if(r.age>=30&&r.age<=90){s+=6;why.push('lost '+r.age+'d ago, cooled off')}else if(r.age<30)s+=2}
+ else{if(LATE.includes(r.stage)){s+=30;why.push('late stage')}else s+=ST_PTS[r.stage]??8;
+  if(r.age>90){s-=8;why.push('open '+r.age+'d')}}
+ if(r.demo==='held'){s+=10;why.push('saw the pitch')}
+ if(r.last){const d=Math.round((t-r.last)/DAY);
+  if(d<0){s+=4;if(d>=-3&&!r.lost&&r.demo==='sched'){s+=15;why.push('demo in '+(-d)+'d, prep it')}else why.push('next step on calendar')}
+  else if(!r.lost){if(d<=7)s+=10;else if(d<=21)s+=6;else if(d<=45)s+=2;else{s-=6;why.push('no touch in '+d+'d')}}}
+ else if(!r.lost){s-=4;why.push('no activity logged')}
+ s=Math.max(0,Math.round(s));return {score:s,tier:s>=58?1:s>=45?2:s>=30?3:4,why:why.slice(0,3)}}
+const TIER=['','Work today','This week','When you have time','Low priority'];
+function shape(o){const a=o.Account||{},c=o.OpportunityContactRoles?.records?.[0]?.Contact||{},lost=o.StageName==='Closed Lost';const t=today();
+ const created=dt(o.CreatedDate),closed=dt(o.CloseDate),held=!!o.Held__c;
+ const missed=!held&&(MISSED_ST.includes(o.StageName)||o.Loss_Reason__c==='Missed Meeting'||(o.Times_Rescheduled__c||0)>0);
+ const demo=held?'held':missed?'missed':(!lost&&SCHED_ST.includes(o.StageName))?'sched':'none';
+ const age=lost?(closed?Math.max(0,Math.round((t-closed)/DAY)):0):(created?Math.max(0,Math.round((t-created)/DAY)):0);
+ return {id:o.Id,o,a,c,lost,biz:a.Name||o.Name,mkt:a.Seated_Market__c||'',gmv:a.Monthly_Revenue_Prediction__c||0,stage:o.StageName||'',loss:o.Loss_Reason__c||'',demo,heldOn:dt(o.Date_Held__c),age,last:dt(o.LastActivityDate),resch:o.Times_Rescheduled__c||0,notes:SNAP.summ[o.Id]?'y':''}}
+const shapeS=o=>{const r=shape(o);return Object.assign(r,score(r))};
+function sfLoad(){const id=$('#sfRep').value;store.set('cb_sfRep',id);SF_ROWS=[];SF_SEL='';$('#pNote').hidden=true;
+ if(!SNAP.owners[id]){$('#pTable').hidden=true;$('#pSum').innerHTML='';sfMsg(`Salesforce snapshot from ${asOfTxt}. Pick yourself to see your pipeline.`);return}
+ const seen=new Set();SF_ROWS=SNAP_ROWS.filter(o=>o.OwnerId===id).map(shapeS).sort((a,b)=>(a.lost-b.lost)||((dt(b.o.CloseDate)||0)-(dt(a.o.CloseDate)||0))).filter(r=>{const k=r.o.AccountId;if(!r.lost){if(k)seen.add(k);return true}if(k&&seen.has(k))return false;if(k)seen.add(k);return true});
+ $('#seller').value=String(SNAP.owners[id]||'').split(' ')[0];save();sfMsg(`Salesforce snapshot from ${asOfTxt}. Click any row to load it into the builder.`);renderPipe()}
+function grpOf(r){const g=pv.group;
+ if(g==='priority')return {k:'P'+r.tier,label:TIER[r.tier],ord:r.tier};
+ if(g==='status'){if(r.lost){return {k:'L'+r.loss,label:'Lost: '+(LOSS[r.loss]||r.loss||'no reason given'),ord:100}}const i=STAGE_ORDER.indexOf(r.stage);return {k:'S'+r.stage,label:r.stage,ord:i<0?50:i}}
+ if(g==='demo'){const m={held:['Demo held',0],missed:['Missed or rescheduled',1],sched:['Demo booked, not held yet',2],none:['No demo yet',3]}[r.demo];return {k:'D'+r.demo+(r.lost?'L':''),label:m[0]+(r.lost?' · lost':''),ord:m[1]+(r.lost?10:0)}}
+ const b=[[7,'0–7 days'],[30,'8–30 days'],[60,'31–60 days'],[90,'61–90 days'],[1e9,'90+ days']];const i=b.findIndex(([n])=>r.age<=n);
+ return r.lost?{k:'A'+i+'L',label:'Lost '+b[i][1]+' ago',ord:20+i}:{k:'A'+i,label:'Open '+b[i][1],ord:i}}
+function demoTag(r){return r.demo==='held'?`<span class="tag held">Held${r.heldOn?' '+esc(fmtD(r.heldOn)):''}</span>`:r.demo==='missed'?`<span class="tag missed">Missed${r.resch?' · '+r.resch+'× resched':''}</span>`:r.demo==='sched'?'<span class="tag">Booked</span>':'<span class="tag lost">None</span>'}
+function renderPipe(){PK_SET=new Set(plays().map(p=>p.acct));$$('#pShow button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===pv.show));$$('#pGroup button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===pv.group));
+ if(!SF_ROWS.length&&!$('#sfRep').value)return;
+ const f=$('#pFind').value.trim().toLowerCase();
+ const rows=SF_ROWS.filter(r=>(pv.show==='all'||(pv.show==='lost')===r.lost)&&(!f||(r.biz+' '+r.mkt).toLowerCase().includes(f)));
+ const open=SF_ROWS.filter(r=>!r.lost),lost=SF_ROWS.filter(r=>r.lost),sum=a=>a.reduce((t,r)=>t+r.gmv,0);
+ $('#pSum').innerHTML=`<span><b>${open.length}</b> open · <b>${money(sum(open))||'$0'}</b>/mo predicted</span><span><b>${open.filter(r=>r.demo==='held').length}</b> held · <b>${open.filter(r=>r.demo==='missed').length}</b> missed</span><span><b>${lost.length}</b> lost since Aug · <b>${money(sum(lost))||'$0'}</b>/mo to win back</span>`;
+ if(!rows.length){$('#pTable').hidden=false;$('#pTable').innerHTML=`<p class="hint" style="padding:12px;margin:0">${SF_ROWS.length?'Nothing matches.':'No open or recently lost opportunities.'}</p>`;return}
+ const key={score:r=>r.score,gmv:r=>r.gmv,biz:r=>r.biz.toLowerCase(),age:r=>r.age,last:r=>r.last?+r.last:0,stage:r=>r.lost?'~'+r.loss:r.stage,demo:r=>r.demo}[pv.sort];
+ const groups=new Map();rows.forEach(r=>{const g=grpOf(r);if(!groups.has(g.k))groups.set(g.k,{...g,rows:[]});groups.get(g.k).rows.push(r)});
+ const gs=[...groups.values()].sort((a,b)=>a.ord-b.ord||a.label.localeCompare(b.label));
+ const th=(k,l,c='')=>`<th data-s="${k}" class="${c}">${l}${pv.sort===k?(pv.dir<0?' ↓':' ↑'):''}</th>`;
+ let h=`<table><thead><tr>${th('biz','Restaurant')}${th('score','Priority','num')}${th('stage','Stage')}${th('demo','Demo')}${th('age','Age','num')}${th('last','Last activity')}${th('gmv','Pred. GMV / mo','num')}</tr></thead><tbody>`;
+ for(const g of gs){g.rows.sort((a,b)=>{const x=key(a),y=key(b);return (x<y?-1:x>y?1:0)*pv.dir});
+  h+=`<tr class="grp"><td colspan="7">${esc(g.label)}<small>${g.rows.length} · ${money(sum(g.rows))||'$0'}/mo</small></td></tr>`;
+  h+=g.rows.map(r=>`<tr class="row${r.id===SF_SEL?' sel':''}" data-id="${esc(r.id)}" tabindex="0"><td>${esc(r.biz)}${r.notes?' <span class="tag" title="Has a meeting notes summary">Notes</span>':''}${PK_SET.has(r.o.AccountId)?' <span class="tag played" title="A play was logged on this account">Played</span>':''}${r.mkt?`<br><small>${esc(r.mkt)}</small>`:''}${r.why.length?`<span class="why">${esc(r.why.join(' · '))}</span>`:''}</td><td class="num"><span class="tag${r.tier<3?' p'+r.tier:''}">${r.score}</span></td><td>${r.lost?`<span class="tag lost">Lost</span> ${esc(LOSS[r.loss]||r.loss||'')}`:esc(r.stage)}</td><td>${demoTag(r)}</td><td class="num">${r.lost?`${r.age}d ago`:`${r.age}d`}</td><td>${esc(fmtD(r.last))}</td><td class="num">${money(r.gmv)||'<small>none</small>'}</td></tr>`).join('')}
+ $('#pTable').innerHTML=h+'</tbody></table>';$('#pTable').hidden=false;
+ $$('#pTable th').forEach(t=>t.onclick=()=>{const k=t.dataset.s;if(pv.sort===k)pv.dir*=-1;else{pv.sort=k;pv.dir=(k==='biz'||k==='stage')?1:-1}renderPipe()});
+ $$('#pTable tr.row').forEach(t=>{t.onclick=()=>sfFill(t.dataset.id);t.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sfFill(t.dataset.id)}}})}
+function sfFill(id){const r=SF_ROWS.find(x=>x.id===id);if(!r)return;SF_SEL=id;const {a,c,o}=r;
+ $('#biz').value=a.Name||'';$('#contact').value=c.FirstName||'';$('#role').value=String(c.Title||'').replace(/^"+|"+$/g,'');
+ const m=a.Seated_Market__c||'';if(m&&![...$('#mkt').options].some(x=>x.value===m)){const op=document.createElement('option');op.value=op.textContent=m;$('#mkt').appendChild(op)}$('#mkt').value=m;HUB_DIN=null;HUB_ACCT={id:o.AccountId||'',name:a.Name||''};$('#hubBar').hidden=true;$('#hood').value=a.Neighborhood__c||'';$('#cuis').value=CU.includes(a.Primary_Cuisine__c)?a.Primary_Cuisine__c:'';
+ $('#locs').value=String(a.Group_Locations__c>1?Math.round(a.Group_Locations__c):1);$('#aov').value='';$('#ndNote').value='';$('#extra').value='';ND=[];
+ renderMkt();$('#gmv').value=r.gmv?String(Math.round(r.gmv)):'';
+ let st=r.lost?LOSS_ST[r.loss]:OPEN_ST[r.stage];if(!st)st=r.demo==='held'?'dark':r.demo==='missed'?'noshow':'unsched';$('#stage').value=st;
+ const when=r.heldOn||(r.last&&r.last<=today()?r.last:null);$('#month').value=when?when.toLocaleString('en-US',{month:'long'}):'';
+ const rv=$('#ch_revolut');if(rv&&!rv.dataset.touched)rv.checked=/Miami|New York/.test($('#mkt').value);
+ renderND();renderSugg();fillPlays();save();renderPipe();
+ const box=$('#pNote');box.hidden=false;
+ box.innerHTML=`<p>Loaded <b>${esc(r.biz)}</b> (${esc(r.lost?'lost: '+(LOSS[r.loss]||r.loss||'no reason'):r.stage)}). History set to "${esc($('#stage').selectedOptions[0]?.textContent||'')}". ${r.gmv?'':'No predicted revenue on the account, so the copy leaves the number out. '}Check the form, then Build it.</p>${o.Loss_Details__c?`<p><b>Loss details:</b> ${esc(plain(o.Loss_Details__c))}</p>`:''}<div id="nBox"></div>`;
+ renderNotes(r);
+ if(matchMedia('(max-width:920px)').matches)$('#f').scrollIntoView({behavior:'smooth'});toast('Loaded '+r.biz)}
+
+function renderNotes(r){const b=$('#nBox');if(!b)return;const m=SNAP.summ[r.id];
+ if(!m){b.innerHTML=`<h3>Meeting notes</h3><p>${r.lost||r.tier>2?'Summaries are included for open opportunities in the top two priority tiers.':'No meeting notes on this opportunity in the snapshot.'}</p>`;return}
+ b.innerHTML=`<h3>Meeting notes summary</h3><ul>${m.s.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${m.c?`<div class="acts"><button type="button" class="btn ghost" id="nUse">Add to builder notes</button></div><p class="hint">Adds: ${esc(m.c)}</p>`:''}`;
+ if(m.c)$('#nUse').onclick=()=>{const e=$('#extra');e.value=e.value.trim()?e.value.trim()+' '+m.c:m.c;save();toast('Added to "Anything else to work in"')}}
+$('#sfRep').onchange=sfLoad;$('#pFind').oninput=renderPipe;
+$$('#pShow button').forEach(b=>b.onclick=()=>{pv.show=b.dataset.v;store.set('cb_pShow',pv.show);renderPipe()});
+$$('#pGroup button').forEach(b=>b.onclick=()=>{pv.group=b.dataset.v;store.set('cb_pGroup2',pv.group);renderPipe()});
+
+
+// Pipeline snapshot: pipeline.enc (encrypted) + key from the Cold Call Hub sheet's Resources tab, so the data is only readable when signed in
+var PIPE_LOADING=false;
+async function loadPipeline(){if(SNAP||PIPE_LOADING)return;PIPE_LOADING=true;sfMsg('Loading your pipeline…');
+ try{const res=await vals('Resources!A2:B');const kv=(res.find(r=>String(r[0]||'').trim()==='collateral_pipeline_key')||[])[1];if(!kv)throw new Error('nokey');
+  const key=await crypto.subtle.importKey('raw',Uint8Array.from(atob(String(kv).trim()),c=>c.charCodeAt(0)),'AES-GCM',false,['decrypt']);
+  const r=await fetch('pipeline.enc',{cache:'no-cache'});if(!r.ok)throw new Error('nofile');const buf=new Uint8Array(await r.arrayBuffer());
+  const plainBuf=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},key,buf.slice(12));
+  const txt=await new Response(new Blob([plainBuf]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  initSnap(JSON.parse(txt));
+  if(!store.get('cb_sfRep','')){let em=ME.email;if(!em){try{em=(JSON.parse(localStorage.getItem('seated_cch_auth')||'null')?.profile?.email)||''}catch(e){}}
+   em=String(em||'').toLowerCase();const hit=Object.entries(SNAP.emails||{}).find(([id,e])=>e===em);if(hit)store.set('cb_sfRep',hit[0])}
+  sfReps()}
+ catch(e){sfMsg(e.message==='nofile'?'The pipeline file is missing from the site. Ask James to upload pipeline.enc.':e.message==='nokey'?'The pipeline key is missing from the Cold Call Hub sheet. Ask James.':'Couldn\u2019t open the pipeline. If James just refreshed it, reload the page.',true)}
+ finally{PIPE_LOADING=false}}
+
 // Play Made! (logs to the "Play Made Log" Google Sheet with each rep's own Google sign-in; nothing public)
 const LOG_ID='1PJZDvwb7NFARHtKEp1tDs6g-lIE8y2Yh9uiP-tR1dJk',RW_SCOPE='https://www.googleapis.com/auth/spreadsheets openid email profile';
 const PK=[['exec','CRO note'],['email','Email'],['seq','Email sequence'],['sms','Texts'],['call','Call'],['li','LinkedIn / IG DM'],['onepager','One-pager'],['card','Offer card'],['other','Other']],PKL=Object.fromEntries(PK);
@@ -559,7 +690,7 @@ function renderDash(){$$('#dRange button').forEach(b=>b.setAttribute('aria-press
  $('#dGrid').innerHTML=`<div class="dcard"><h3>Leaderboard</h3>${lb.length?`<table><tr><th>Rep</th><th class="num">Accounts</th><th class="num">Plays</th><th>Most sent</th></tr>${lb.map((r,i)=>`<tr><td>${i<3?['🥇','🥈','🥉'][i]+' ':''}${esc(who(r.p))}${ME.email&&r.p.email===ME.email?' <small>(you)</small>':''}</td><td class="num">${r.a.size}</td><td class="num">${r.n}</td><td>${esc(top(r.k))}</td></tr>`).join('')}</table>`:'<p class="hint">No plays in this range.</p>'}</div>
  <div class="dcard"><h3>What's being sent</h3>${Object.keys(types).length?`<table>${Object.entries(types).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<tr><td style="width:40%">${esc(PKL[k]||k)}</td><td><div class="bar2" style="width:${Math.max(4,Math.round(n/tmax*100))}%"></div></td><td class="num" style="width:36px">${n}</td></tr>`).join('')}</table>`:'<p class="hint">Nothing yet.</p>'}</div>
  <div class="dcard"><h3>Recent plays</h3><div class="feed">${ps.slice(0,40).map(p=>`<div><b>${esc(who(p))}</b> sent ${esc(p.k.map(x=>PKL[x]||x).join(', '))} to <b>${esc(p.biz)}</b>${p.mkt?' <small>· '+esc(p.mkt)+'</small>':''} <small>· ${rel(p.t)}</small>${ME.email&&p.email===ME.email?` <button type="button" data-undo="${esc(p.pid)}">undo</button>`:''}</div>`).join('')||'<p class="hint">No plays in this range.</p>'}</div></div>`;
- $$('#dGrid [data-undo]').forEach(b=>b.onclick=()=>undoPlay(b.dataset.undo))}
+ $$('#dGrid [data-undo]').forEach(b=>b.onclick=()=>undoPlay(b.dataset.undo));if(SNAP)renderPipe()}
 $$('#dRange button').forEach(b=>b.onclick=()=>{dRange=b.dataset.v;store.set('cb_dRange',dRange);renderDash()});
 $('#playBtn').onclick=openPlay;
 
