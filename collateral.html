@@ -332,7 +332,7 @@ function card(x){const W=1200,H=628,M=60;const k=x.P.img||'dinova';const land=IM
  {const ol=Math.floor(tw/12.5),n=nLines(offerBox(),ol);s+=`<rect x="${M}" y="${y}" width="${tw}" height="76" rx="12" fill="${VC.dark}"/>`+lines(offerBox(),M+22,y+(n>1?32:46),ol,22,VC.fill,26,{w:700})}
  s+=s2.svg+`<text x="${M}" y="${H-46}" fill="${VC.sub}" font-size="16" font-family='${SANS}'>No upfront cost · Nothing changes at the host stand · Pay only on meals we send</text><image href="${IMG.logo_dark.src}" x="${W-M-120}" y="${H-66}" width="120" height="24"/></svg>`;return {svg:s,over:y+76>H-60}}
 // builder
-const KINDS=[['exec','CRO note from Gradie','exec email, all value'],['email','Email','right for their history'],['seq','3-email sequence','today / +3 / +6 days'],['sms','Texts','2 short texts'],['hub','Cold call (Hub script)','opener, discovery, objections'],['call','Call script','rebook or follow-up'],['li','LinkedIn / IG DM','to owner or GM'],['onepager','One-pager','visual, letter size'],['card','Offer card','visual, 1200×628']];
+const KINDS=[['tp','Talking points','for you, not to send'],['exec','CRO note from Gradie','exec email, all value'],['email','Email','right for their history'],['seq','3-email sequence','today / +3 / +6 days'],['sms','Texts','2 short texts'],['call','Call script','rebook or follow-up'],['li','LinkedIn / IG DM','to owner or GM'],['onepager','One-pager','visual, letter size'],['card','Offer card','visual, 1200×628']];
 let kind=store.get('cb_kind','exec');if(!KINDS.some(k=>k[0]===kind))kind='exec';
 $('#kinds').innerHTML=KINDS.map(([k,l,s])=>`<button class="kind" data-k="${k}" aria-pressed="${k===kind}">${esc(l)}<small>${esc(s)}</small></button>`).join('');
 $('#kinds').querySelectorAll('.kind').forEach(b=>b.onclick=()=>{kind=b.dataset.k;store.set('cb_kind',kind);$('#kinds').querySelectorAll('.kind').forEach(x=>x.setAttribute('aria-pressed',x===b));go()});
@@ -341,6 +341,7 @@ function warn(x){const w=[];if(!$('#biz').value.trim())w.push('Add the business 
  $('#oWarn').hidden=!w.length;$('#oWarn').textContent=w.join(' ')}
 async function go(){fillPlays();const x=ctx();warn(x);const lab=KINDS.find(k=>k[0]===kind)[1];$('#oTitle').textContent=`${lab} · ${x.biz}`;$('#oVis').innerHTML='';$('#oText').textContent='';lastSvg=null;['#oSvg','#oPng','#oCopy'].forEach(s=>$(s).hidden=true);
  if(kind==='onepager'||kind==='card'){const r=(kind==='card'?card:onepager)(x);lastSvg=r.svg;$('#oVis').innerHTML=r.svg;if(r.over)$('#oText').textContent='This is running long. Trim the name-droppers or channels so it fits.';$('#oSvg').hidden=false;$('#oPng').hidden=false;return}
+ if(kind==='tp'){lastText=talkingPoints(x);$('#oText').textContent=lastText;$('#oCopy').hidden=false;return}
  if(kind==='hub'){lastText=hub(x);$('#oText').textContent=lastText;$('#oCopy').hidden=false;return}
  if(!SAMPLE){lastText=tmpl(kind,x);$('#oText').textContent=lastText;$('#oCopy').hidden=false;return}
  ctl?.abort();ctl=new AbortController();$('#oText').textContent='Writing…';$('#oStop').hidden=false;$('#go').disabled=true;
@@ -383,7 +384,7 @@ async function loadSheet(){if(!SHEET.token){sheetMsg('Sign in with your Seated G
   SHEET.ok=true;const cu=$('#cuis').value;$('#cuis').innerHTML='<option value="">Any cuisine</option>'+[...new Set(CU.filter(Boolean))].sort().map(c=>`<option>${esc(c)}</option>`).join('');$('#cuis').value=cu;
   fillMkts();renderMkt();renderSugg();
   sheetMsg(`Using the Cold Call Hub sheet: ${Object.keys(MK).filter(k=>MK[k].mem).length} markets, ${Object.values(NDM).reduce((t,h)=>t+Object.values(h).reduce((a,l)=>a+l.length,0),0)} name-droppers${Object.keys(SHEET.scripts).length?', live call script':''}.`);
-  if(kind==='hub'&&lastText)go()}
+  if(kind==='tp'&&lastText)go()}
  catch(e){SHEET.ok=false;if(e.status===401){SHEET.token=null;try{localStorage.removeItem('seated_ccb_auth')}catch(_){}sheetMsg('Your Google sign-in expired. Sign in again to use the sheet.',true,true)}
   else if(e.status===403)sheetMsg('Your Google account can\u2019t open the Cold Call Hub sheet. Ask James for access.',true);
   else sheetMsg('Couldn\u2019t reach the Cold Call Hub sheet just now.',true,true)}}
@@ -400,6 +401,56 @@ function hubFromSheet(x){const S2=SHEET.scripts,G=(k,d='')=>(S2[k]!=null&&String
  const cl=['close_confirm_priority','close_ask','close_lock','close_get_cell'].filter(k=>G(k)).map(k=>F(G(k)));if(cl.length)out+=`Close\n${cl.join('\n\n')}\n\n`;
  const ok=Object.keys(S2).filter(k=>k.startsWith('obj_')&&G(k));if(ok.length)out+=`Objections\n${ok.map(k=>`${OBJ_LABEL[k]||k.slice(4).replace(/_/g,' ')}: ${F(G(k))}`).join('\n\n')}`;
  return out.trim()}
+
+// Talking points (rep-facing): the Dinova holiday urgency play from the team meeting
+function talkingPoints(x){const co=lst(x.corp.slice(0,3))||'big local employers',when=x.month?` in ${x.month}`:'',est=x.g?`we estimate ${UL(x)}`:'',nd2=x.nd.length?lst(x.nd.slice(0,2)):'';
+ const off=offerLine()||'25% off their Dinova rate for November and December';
+ const proof=[est&&`For ${x.biz}, ${est}.`,nd2&&`We already send diners to ${nd2}.`].filter(Boolean).join(' ');
+ const open={
+  cold:`They don't know us yet. Lead with the problem you solve: getting corporate diners in the door during the one season companies are actively booking.`,
+  unsched:`They showed interest${when} but never got on the calendar. "We tried to find a time${when}. Holiday season is the reason to lock it in this week."`,
+  upcoming:`Demo is booked. Confirm it and preview the Dinova holiday angle so they show up ready to decide.`,
+  noshow:`They booked and didn't show${when}. Own it, then: "Dinova's corporate season is here, so this is the week to get you set up."`,
+  dark:`You talked${when} and they went quiet. "I know we talked${when}. Dinova's corporate season is coming up, and I want to get you set up now."`,
+  open:`Open opp. The holiday window is the reason to decide this week, not after Thanksgiving.`,
+  pricing:`Price was the sticking point${when}. Lead with the sweetener: ${off}. You only pay on meals we send.`,
+  owner:`The owner said no last time. Offer the smaller first step below: just Dinova and Seated.`,
+  timing:`They said the timing wasn't right${when}. "Holiday party season is the timing. This is when companies book."`}[x.stage]||'';
+ return `Talking points: ${x.biz} (for you, not to send)
+
+THE PLAY
+Every call needs a reason to sign up now. Right now it's Dinova's corporate holiday season.
+${open}
+${proof?'\nPROOF\n'+proof+'\n':''}
+WHY NOW
+Companies like ${co} plan holiday parties, client dinners and team meals through Dinova, and they're booking them now.
+Dinova markets restaurants straight to corporations a restaurant can't reach on its own, like the holiday guide it sends to its corporate clients.
+Getting live takes 3 to 4 weeks, so the decision has to happen this week to have a shot this season.
+Don't promise a spot on the holiday guide. Dinova picks the restaurants. What we're selling is the chance to be considered.
+
+"TALK TO ME AFTER THANKSGIVING"
+"By then the holiday lists are set. We need to get you on Dinova now so you're in the running for the corporate parties."
+After the holidays, January goes quiet. Getting set up now means new diners are already coming in when it slows down.
+
+IF THEY DON'T WANT EVERY PLATFORM
+"I hear you. Start with just two: Dinova for the corporate diners, and Seated for neighborhood regulars who come back."
+The full partner portfolio can wait for their account manager.
+
+SWEETENER
+${off}.
+
+PLAY THE LONG GAME
+"What's a regular worth to you over a year?" One new loyal guest from a holiday party is worth far more than one check that night.
+
+"JUST SEND ME AN EMAIL"
+Don't fall back to general info. Ask what their goal is right now, or bucket them: "Are you more focused on neighborhood regulars or corporate diners right now?" Then send the matching one-pager or note.
+
+FOLLOW-UP
+Send the one-pager or Gradie's note while you're still on the phone.
+When you call back, don't ask "did you see my email?" Say "Do you have your phone on you? Open it up and let's walk through it." If they can't, tell them what you sent.
+
+MINDSET
+You're here to help. It matters that they get set up now, and if you mean that, it comes across.${x.extra?'\n\nYOUR NOTES\n'+x.extra:''}`}
 
 // Cold Call Hub hand-off: the hub links here with #hub=<json>
 function applyHub(){const m=location.hash.match(/^#hub=(.+)$/);if(!m)return;let d;try{d=JSON.parse(decodeURIComponent(m[1]))}catch(e){return}
