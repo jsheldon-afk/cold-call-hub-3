@@ -65,6 +65,8 @@ textarea{min-height:56px;resize:vertical}
 .ptable td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 .ptable tr.grp td{background:var(--bg);font-weight:600;color:var(--ink);position:sticky;top:31px}
 .ptable tr.grp td small{font-weight:400;color:var(--muted);margin-left:8px}
+.ptable tr.grp.sched td{cursor:pointer;background:var(--accent-soft);color:var(--accent)}.ptable tr.grp.sched:hover td{filter:brightness(.97)}
+.ptable tr.grp.stale td{background:var(--warn);color:var(--warn-ink)}
 .ptable tr.row{cursor:pointer}.ptable tr.row:hover td{background:var(--accent-soft)}
 .ptable tr.row.sel td{background:var(--accent-soft);box-shadow:inset 0 0 0 0 var(--accent)}
 .ptable tr.row.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
@@ -129,7 +131,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   <div class="ptools">
     <label for="sfRep">Rep<select id="sfRep" disabled><option value="">Loading reps…</option></select></label>
     <div><span class="hint">Show</span><div class="seg" id="pShow"><button type="button" data-v="open">Open</button><button type="button" data-v="lost">Lost since Aug</button><button type="button" data-v="all">Both</button></div></div>
-    <div><span class="hint">Group by</span><div class="seg" id="pGroup"><button type="button" data-v="priority">Priority</button><button type="button" data-v="status">Status</button><button type="button" data-v="demo">Held or missed</button><button type="button" data-v="age">Time open</button></div></div>
+    <div><span class="hint">Group by</span><div class="seg" id="pGroup"><button type="button" data-v="playbook">Playbook</button><button type="button" data-v="priority">Priority</button><button type="button" data-v="status">Status</button><button type="button" data-v="demo">Held or missed</button><button type="button" data-v="age">Time open</button></div></div>
     <label for="pFind">Find<input id="pFind" placeholder="Restaurant or market"></label>
   </div>
   <div class="psum" id="pSum"></div>
@@ -587,7 +589,7 @@ You're here to help. It matters that they get set up now, and if you mean that, 
 
 // Salesforce pipeline report (each viewer's own Salesforce MCP connector)
 const SF_SERVER='Salesforce MCP',SF_TOOL='soqlQueryplatform_sobject_reads',LOST_SINCE='2026-08-01';let MCP=null,SF_ROWS=[],SF_SEL='';
-const pv={show:store.get('cb_pShow','open'),group:store.get('cb_pGroup2','priority'),sort:'score',dir:-1};
+const pv={sched:!!store.get('cb_pSched',''),show:store.get('cb_pShow','open'),group:store.get('cb_pGroup3','playbook'),sort:'score',dir:-1};
 const STAGE_ORDER=['Verbal Commitment','Order Form Sent','Negotiation','Product Evaluation','Setting up Direct','In Development','Aggregator Publisher Review','Following Up','On Hold - Interested','Hold','Demo Scheduled','Meeting Scheduled','Scheduling','Missed (Actively Rescheduling)','Follow-up Missed','Expressed Interest','Prospecting'];
 const MISSED_ST=['Missed (Actively Rescheduling)','Follow-up Missed'],SCHED_ST=['Demo Scheduled','Meeting Scheduled'];
 const LOSS={'Unable to Schedule - Marketing Opp':'Unable to schedule','Missed Meeting':'Missed meeting','Pitched, cannot get in touch again':'Pitched, ghosted','Could not reach decision maker':'Pitched non-DM, couldn\u2019t reach DM','Pitched GM, Owner said No':'Pitched non-DM, DM said no','Pricing too high':'Pricing too high','Not comfortable giving billing info':'Not comfortable giving billing info','Setup not a fit (pre-pay, assigned seats, etc.)':'Business model not a fit','InKind Partner':'Works with competitor','Timing too far out':'Timing too far out','Not fit for Seated brand':'Not fit for Seated brand','Dining rewards not focus':'Dining rewards not focus','Approaching via aggregator':'Approaching via aggregator','Too small':'Too small','Timing not right':'Timing not right','Staffing concerns':'Staffing concerns','Rewards Network Partner':'Rewards Network partner','Wanted Customizable Tip Amount':'Wanted customizable tip','Cannibalization':'Cannibalization'};
@@ -607,7 +609,7 @@ function sfErr(e){const c=e?.code;
  if(c==='cancelled')return;
  sfMsg('Could not reach Salesforce just now.',true,true)}
 var SNAP=null,SNAP_ROWS=[],asOfTxt='';
-function initSnap(d){SNAP=d;SNAP_ROWS=SNAP.rows.map(r=>({Id:r[0],AccountId:r[1],OwnerId:r[2],StageName:r[3],CreatedDate:r[4],CloseDate:r[5],LastActivityDate:r[6]||null,Held__c:!!r[7],Date_Held__c:r[8]||null,Times_Rescheduled__c:r[9],Loss_Reason__c:r[10]||null,Account:{Name:r[11],Seated_Market__c:r[12]||null,Neighborhood__c:r[13]||null,Primary_Cuisine__c:r[14]||null,Monthly_Revenue_Prediction__c:r[15]||null,Group_Locations__c:r[16]||0},OpportunityContactRoles:{records:[{Contact:{FirstName:r[17]||'',Title:r[18]||''}}]},LastCall:r[19]||null}));
+function initSnap(d){SNAP=d;SNAP_ROWS=SNAP.rows.map(r=>({Id:r[0],AccountId:r[1],OwnerId:r[2],StageName:r[3],CreatedDate:r[4],CloseDate:r[5],LastActivityDate:r[6]||null,Held__c:!!r[7],Date_Held__c:r[8]||null,Times_Rescheduled__c:r[9],Loss_Reason__c:r[10]||null,Account:{Name:r[11],Seated_Market__c:r[12]||null,Neighborhood__c:r[13]||null,Primary_Cuisine__c:r[14]||null,Monthly_Revenue_Prediction__c:r[15]||null,Group_Locations__c:r[16]||0},OpportunityContactRoles:{records:[{Contact:{FirstName:r[17]||'',Title:r[18]||''}}]},LastCall:r[19]||null,Scheduled_FOR__c:r[20]||null,Rescheduled_FOR__c:r[21]||null}));
 asOfTxt=SNAP.live?'Live from Salesforce, refreshed every 4 hours':'Salesforce snapshot from '+new Date(SNAP.asOf+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 function sfReps(){const n={};SNAP_ROWS.forEach(o=>{n[o.OwnerId]=(n[o.OwnerId]||0)+(o.StageName!=='Closed Lost'?1:0)});
  const ids=Object.keys(SNAP.owners).sort((a,b)=>SNAP.owners[a].localeCompare(SNAP.owners[b]));const last=store.get('cb_sfRep','');
@@ -624,6 +626,7 @@ function score(r){const why=[];let s=0;const t=today();
  else{if(LATE.includes(r.stage)){s+=30;why.push('late stage')}else s+=ST_PTS[r.stage]??8;
   if(r.age>90){s-=8;why.push('open '+r.age+'d')}}
  if(r.demo==='held'){s+=10;why.push('saw the pitch')}
+ if(r.stale)why.unshift('demo date passed, not held');
  if(r.next){const d=Math.round((r.next-t)/DAY);s+=4;if(d<=3&&!r.lost&&r.demo==='sched'){s+=15;why.push('demo in '+d+'d, prep it')}else why.push('next step on calendar')}
  const lc=r.lastCall||(r.last&&r.last<=t?r.last:null);
  if(lc){if(!r.lost){const d=Math.max(0,Math.round((t-lc)/DAY));if(d<=7)s+=10;else if(d<=21)s+=6;else if(d<=45)s+=2;else{s-=6;why.push('no call in '+d+'d')}}}
@@ -633,21 +636,29 @@ const TIER=['','Work today','This week','When you have time','Low priority'];
 function shape(o){const a=o.Account||{},c=o.OpportunityContactRoles?.records?.[0]?.Contact||{},lost=o.StageName==='Closed Lost';const t=today();
  const created=dt(o.CreatedDate),closed=dt(o.CloseDate),held=!!o.Held__c;
  const missed=!held&&(MISSED_ST.includes(o.StageName)||o.Loss_Reason__c==='Missed Meeting'||(o.Times_Rescheduled__c||0)>0);
- const demo=held?'held':missed?'missed':(!lost&&SCHED_ST.includes(o.StageName))?'sched':'none';
+ const toDT=v=>{if(!v)return null;v=String(v).trim();let m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(.*)$/);const d=m?new Date(`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}${m[4]&&m[4].trim()?'T'+m[4].trim():'T12:00:00'}`):new Date(v.replace(/\+0000$/,'Z'));return isNaN(d)?null:d};
+ const demoAt=toDT(o.Rescheduled_FOR__c)||toDT(o.Scheduled_FOR__c),now=new Date();
+ const stale=!lost&&!held&&!o.Date_Held__c&&SCHED_ST.includes(o.StageName)&&!!demoAt&&demoAt<new Date(new Date().setHours(0,0,0,0));
+ const demo=held?'held':(missed||stale)?'missed':(!lost&&SCHED_ST.includes(o.StageName))?'sched':'none';
  const age=lost?(closed?Math.max(0,Math.round((t-closed)/DAY)):0):(created?Math.max(0,Math.round((t-created)/DAY)):0);
- return {id:o.Id,o,a,c,lost,biz:a.Name||o.Name,mkt:a.Seated_Market__c||'',gmv:a.Monthly_Revenue_Prediction__c||0,stage:o.StageName||'',loss:o.Loss_Reason__c||'',demo,heldOn:dt(o.Date_Held__c),age,last:dt(o.LastActivityDate),lastCall:dt(o.LastCall),next:(()=>{const d=dt(o.LastActivityDate);return d&&d>t?d:null})(),resch:o.Times_Rescheduled__c||0,notes:SNAP.summ[o.Id]?'y':''}}
+ return {id:o.Id,o,a,c,lost,biz:a.Name||o.Name,mkt:a.Seated_Market__c||'',gmv:a.Monthly_Revenue_Prediction__c||0,stage:o.StageName||'',loss:o.Loss_Reason__c||'',demo,heldOn:dt(o.Date_Held__c),age,last:dt(o.LastActivityDate),lastCall:dt(o.LastCall),stale,demoAt,next:stale?null:(()=>{const c=[dt(o.LastActivityDate),demoAt].filter(d=>d&&d>t);return c.length?new Date(Math.min(...c)):null})(),resch:o.Times_Rescheduled__c||0,notes:SNAP.summ[o.Id]?'y':''}}
 const shapeS=o=>{const r=shape(o);return Object.assign(r,score(r))};
 function sfLoad(){const id=$('#sfRep').value;store.set('cb_sfRep',id);SF_ROWS=[];SF_SEL='';$('#pNote').hidden=true;
  if(!SNAP.owners[id]){$('#pTable').hidden=true;$('#pSum').innerHTML='';sfMsg(`${asOfTxt}. Pick yourself to see your pipeline.`);return}
  const seen=new Set();SF_ROWS=SNAP_ROWS.filter(o=>o.OwnerId===id).map(shapeS).sort((a,b)=>(a.lost-b.lost)||((dt(b.o.CloseDate)||0)-(dt(a.o.CloseDate)||0))).filter(r=>{const k=r.o.AccountId;if(!r.lost){if(k)seen.add(k);return true}if(k&&seen.has(k))return false;if(k)seen.add(k);return true});
  $('#seller').value=String(SNAP.owners[id]||'').split(' ')[0];save();sfMsg(`${asOfTxt}. Click any row to load it into the builder.`);renderPipe()}
 function grpOf(r){const g=pv.group;
+ if(g==='playbook'){if(r.lost)return {k:'L'+r.loss,label:'Lost: '+(LOSS[r.loss]||r.loss||'no reason given'),ord:100};
+  if(r.stale||r.stage==='Missed (Actively Rescheduling)')return {k:'PB5',label:'Missed meetings',ord:5,act:'Everyone gets a call and a voicemail.',stale:1};
+  const m={'Order Form Sent':[1,'Order Form Sent'],'Follow-up Missed':[2,'Follow-up missed'],'Following Up':[3,'Following up'],'On Hold - Interested':[4,'On hold'],'Hold':[4,'On hold']}[r.stage];
+  return m?{k:'PB'+m[0],label:m[1],ord:m[0]}:{k:'PB6',label:'Everything else',ord:6}}
+ if(r.stale)return {k:'STALE',label:'Needs action: demo date passed, not marked held',ord:-1,stale:1};
  if(g==='priority')return {k:'P'+r.tier,label:TIER[r.tier],ord:r.tier};
  if(g==='status'){if(r.lost){return {k:'L'+r.loss,label:'Lost: '+(LOSS[r.loss]||r.loss||'no reason given'),ord:100}}const i=STAGE_ORDER.indexOf(r.stage);return {k:'S'+r.stage,label:r.stage,ord:i<0?50:i}}
  if(g==='demo'){const m={held:['Demo held',0],missed:['Missed or rescheduled',1],sched:['Demo booked, not held yet',2],none:['No demo yet',3]}[r.demo];return {k:'D'+r.demo+(r.lost?'L':''),label:m[0]+(r.lost?' · lost':''),ord:m[1]+(r.lost?10:0)}}
  const b=[[7,'0–7 days'],[30,'8–30 days'],[60,'31–60 days'],[90,'61–90 days'],[1e9,'90+ days']];const i=b.findIndex(([n])=>r.age<=n);
  return r.lost?{k:'A'+i+'L',label:'Lost '+b[i][1]+' ago',ord:20+i}:{k:'A'+i,label:'Open '+b[i][1],ord:i}}
-function demoTag(r){return r.demo==='held'?`<span class="tag held">Held${r.heldOn?' '+esc(fmtD(r.heldOn)):''}</span>`:r.demo==='missed'?`<span class="tag missed">Missed${r.resch?' · '+r.resch+'× resched':''}</span>`:r.demo==='sched'?'<span class="tag">Booked</span>':'<span class="tag lost">None</span>'}
+function demoTag(r){if(r.stale)return `<span class="tag missed">Passed ${esc(fmtD(r.demoAt))}, not held</span>`;return r.demo==='held'?`<span class="tag held">Held${r.heldOn?' '+esc(fmtD(r.heldOn)):''}</span>`:r.demo==='missed'?`<span class="tag missed">Missed${r.resch?' · '+r.resch+'× resched':''}</span>`:r.demo==='sched'?`<span class="tag">Booked${r.demoAt?' '+esc(fmtD(r.demoAt)):''}</span>`:'<span class="tag lost">None</span>'}
 function renderPipe(){PK_SET=new Set(plays().map(p=>p.acct));$$('#pShow button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===pv.show));$$('#pGroup button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===pv.group));
  if(!SF_ROWS.length&&!$('#sfRep').value)return;
  const f=$('#pFind').value.trim().toLowerCase();
@@ -656,27 +667,31 @@ function renderPipe(){PK_SET=new Set(plays().map(p=>p.acct));$$('#pShow button')
  $('#pSum').innerHTML=`<span><b>${open.length}</b> open · <b>${money(sum(open))||'$0'}</b>/mo predicted</span><span><b>${open.filter(r=>r.demo==='held').length}</b> held · <b>${open.filter(r=>r.demo==='missed').length}</b> missed</span><span><b>${lost.length}</b> lost since Aug · <b>${money(sum(lost))||'$0'}</b>/mo to win back</span>`;
  if(!rows.length){$('#pTable').hidden=false;$('#pTable').innerHTML=`<p class="hint" style="padding:12px;margin:0">${SF_ROWS.length?'Nothing matches.':'No open or recently lost opportunities.'}</p>`;return}
  const key={score:r=>r.score,gmv:r=>r.gmv,biz:r=>r.biz.toLowerCase(),age:r=>r.age,last:r=>r.lastCall?+r.lastCall:0,stage:r=>r.lost?'~'+r.loss:r.stage,demo:r=>r.demo}[pv.sort];
- const groups=new Map();rows.forEach(r=>{const g=grpOf(r);if(!groups.has(g.k))groups.set(g.k,{...g,rows:[]});groups.get(g.k).rows.push(r)});
+ const nowT=new Date(),isSched=r=>!r.lost&&!r.stale&&r.demo!=='held'&&!!r.demoAt&&r.demoAt>nowT,sched=rows.filter(isSched).sort((a,b)=>a.demoAt-b.demoAt);
+ const groups=new Map();rows.filter(r=>!isSched(r)).forEach(r=>{const g=grpOf(r);if(!groups.has(g.k))groups.set(g.k,{...g,rows:[]});groups.get(g.k).rows.push(r)});
  const gs=[...groups.values()].sort((a,b)=>a.ord-b.ord||a.label.localeCompare(b.label));
+ const rowH=r=>`<tr class="row${r.id===SF_SEL?' sel':''}" data-id="${esc(r.id)}" tabindex="0"><td>${esc(r.biz)}${r.notes?' <span class="tag" title="Has a meeting notes summary">Notes</span>':''}${PK_SET.has(r.o.AccountId)?' <span class="tag played" title="A play was logged on this account">Played</span>':''}${r.mkt?`<br><small>${esc(r.mkt)}</small>`:''}${r.why.length?`<span class="why">${esc(r.why.join(' · '))}</span>`:''}</td><td class="num"><span class="tag${r.tier<3?' p'+r.tier:''}">${r.score}</span></td><td>${r.lost?`<span class="tag lost">Lost</span> ${esc(LOSS[r.loss]||r.loss||'')}`:esc(r.stage)}</td><td>${demoTag(r)}</td><td class="num">${r.lost?`${r.age}d ago`:`${r.age}d`}</td><td>${r.lastCall?`${esc(fmtD(r.lastCall))}<br><small>${Math.max(0,Math.round((today()-r.lastCall)/DAY))}d ago</small>`:'<small>none logged</small>'}${r.next?`<br><small>Next: ${esc(fmtD(r.next))}</small>`:''}</td><td class="num">${money(r.gmv)||'<small>none</small>'}</td></tr>`;
  const th=(k,l,c='')=>`<th data-s="${k}" class="${c}">${l}${pv.sort===k?(pv.dir<0?' ↓':' ↑'):''}</th>`;
  let h=`<table><thead><tr>${th('biz','Restaurant')}${th('score','Priority','num')}${th('stage','Stage')}${th('demo','Demo')}${th('age','Age','num')}${th('last','Last call')}${th('gmv','Pred. GMV / mo','num')}</tr></thead><tbody>`;
  for(const g of gs){g.rows.sort((a,b)=>{const x=key(a),y=key(b);return (x<y?-1:x>y?1:0)*pv.dir});
-  h+=`<tr class="grp"><td colspan="7">${esc(g.label)}<small>${g.rows.length} · ${money(sum(g.rows))||'$0'}/mo</small></td></tr>`;
-  h+=g.rows.map(r=>`<tr class="row${r.id===SF_SEL?' sel':''}" data-id="${esc(r.id)}" tabindex="0"><td>${esc(r.biz)}${r.notes?' <span class="tag" title="Has a meeting notes summary">Notes</span>':''}${PK_SET.has(r.o.AccountId)?' <span class="tag played" title="A play was logged on this account">Played</span>':''}${r.mkt?`<br><small>${esc(r.mkt)}</small>`:''}${r.why.length?`<span class="why">${esc(r.why.join(' · '))}</span>`:''}</td><td class="num"><span class="tag${r.tier<3?' p'+r.tier:''}">${r.score}</span></td><td>${r.lost?`<span class="tag lost">Lost</span> ${esc(LOSS[r.loss]||r.loss||'')}`:esc(r.stage)}</td><td>${demoTag(r)}</td><td class="num">${r.lost?`${r.age}d ago`:`${r.age}d`}</td><td>${r.lastCall?`${esc(fmtD(r.lastCall))}<br><small>${Math.max(0,Math.round((today()-r.lastCall)/DAY))}d ago</small>`:'<small>none logged</small>'}${r.next?`<br><small>Next: ${esc(fmtD(r.next))}</small>`:''}</td><td class="num">${money(r.gmv)||'<small>none</small>'}</td></tr>`).join('')}
+  h+=`<tr class="grp${g.stale?' stale':''}"><td colspan="7">${esc(g.label)}<small>${g.rows.length} · ${money(sum(g.rows))||'$0'}/mo</small>${g.act?`<span class="why" style="font-weight:700;color:inherit">${esc(g.act)}</span>`:''}</td></tr>`;
+  h+=g.rows.map(rowH).join('')}
+ if(sched.length){h+=`<tr class="grp sched" id="schedTog" tabindex="0" role="button" aria-expanded="${pv.sched?'true':'false'}"><td colspan="7">${pv.sched?'\u25be':'\u25b8'} Demo scheduled: upcoming<small>${sched.length} \u00b7 ${money(sum(sched))||'$0'}/mo \u00b7 ${pv.sched?'click to hide':'click to show'}</small></td></tr>`;if(pv.sched)h+=sched.map(rowH).join('')}
  $('#pTable').innerHTML=h+'</tbody></table>';$('#pTable').hidden=false;
  $$('#pTable th').forEach(t=>t.onclick=()=>{const k=t.dataset.s;if(pv.sort===k)pv.dir*=-1;else{pv.sort=k;pv.dir=(k==='biz'||k==='stage')?1:-1}renderPipe()});
+ const tg=$('#schedTog');if(tg){const flip=()=>{pv.sched=!pv.sched;store.set('cb_pSched',pv.sched?'1':'');renderPipe()};tg.onclick=flip;tg.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();flip()}}}
  $$('#pTable tr.row').forEach(t=>{t.onclick=()=>sfFill(t.dataset.id);t.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sfFill(t.dataset.id)}}})}
 function sfFill(id){const r=SF_ROWS.find(x=>x.id===id);if(!r)return;SF_SEL=id;const {a,c,o}=r;
  $('#biz').value=a.Name||'';$('#contact').value=c.FirstName||'';$('#role').value=String(c.Title||'').replace(/^"+|"+$/g,'');
  const m=a.Seated_Market__c||'';if(m&&![...$('#mkt').options].some(x=>x.value===m)){const op=document.createElement('option');op.value=op.textContent=m;$('#mkt').appendChild(op)}$('#mkt').value=m;HUB_DIN=null;HUB_ACCT={id:o.AccountId||'',name:a.Name||''};$('#hubBar').hidden=true;$('#hood').value=a.Neighborhood__c||'';$('#cuis').value=CU.includes(a.Primary_Cuisine__c)?a.Primary_Cuisine__c:'';
  $('#locs').value=String(a.Group_Locations__c>1?Math.round(a.Group_Locations__c):1);$('#aov').value='';$('#ndNote').value='';$('#extra').value='';ND=[];
  renderMkt();$('#gmv').value=r.gmv?String(Math.round(r.gmv)):'';
- let st=r.lost?LOSS_ST[r.loss]:OPEN_ST[r.stage];if(!st)st=r.demo==='held'?'dark':r.demo==='missed'?'noshow':'unsched';$('#stage').value=st;
+ let st=r.stale?'noshow':r.lost?LOSS_ST[r.loss]:OPEN_ST[r.stage];if(!st)st=r.demo==='held'?'dark':r.demo==='missed'?'noshow':'unsched';$('#stage').value=st;
  const when=r.lastCall||r.heldOn||(r.last&&r.last<=today()?r.last:null);$('#month').value=when?when.toLocaleString('en-US',{month:'long'}):'';
  const rv=$('#ch_revolut');if(rv&&!rv.dataset.touched)rv.checked=/Miami|New York/.test($('#mkt').value);
  renderND();renderSugg();fillPlays();save();renderPipe();
  const box=$('#pNote');box.hidden=false;
- box.innerHTML=`<p>Loaded <b>${esc(r.biz)}</b> (${esc(r.lost?'lost: '+(LOSS[r.loss]||r.loss||'no reason'):r.stage)}). History set to "${esc($('#stage').selectedOptions[0]?.textContent||'')}". ${r.gmv?'':'No predicted revenue on the account, so the copy leaves the number out. '}${r.lastCall?`Last call: ${esc(fmtD(r.lastCall))} (${Math.max(0,Math.round((today()-r.lastCall)/DAY))} days ago). `:'No calls logged on this account. '}Check the form, then Build it.</p>${o.Loss_Details__c?`<p><b>Loss details:</b> ${esc(plain(o.Loss_Details__c))}</p>`:''}<div id="nBox"></div>`;
+ box.innerHTML=`<p>Loaded <b>${esc(r.biz)}</b> (${esc(r.lost?'lost: '+(LOSS[r.loss]||r.loss||'no reason'):r.stage)}). History set to "${esc($('#stage').selectedOptions[0]?.textContent||'')}". ${r.gmv?'':'No predicted revenue on the account, so the copy leaves the number out. '}${r.stale?`<b>Demo was set for ${esc(fmtD(r.demoAt))} and isn\u2019t marked held, so it was probably missed. Confirm what happened, update the stage in Salesforce, and rebook. </b>`:''}${r.lastCall?`Last call: ${esc(fmtD(r.lastCall))} (${Math.max(0,Math.round((today()-r.lastCall)/DAY))} days ago). `:'No calls logged on this account. '}Check the form, then Build it.</p>${o.Loss_Details__c?`<p><b>Loss details:</b> ${esc(plain(o.Loss_Details__c))}</p>`:''}<div id="nBox"></div>`;
  renderNotes(r);
  if(matchMedia('(max-width:920px)').matches)$('#f').scrollIntoView({behavior:'smooth'});toast('Loaded '+r.biz)}
 
@@ -686,7 +701,7 @@ function renderNotes(r){const b=$('#nBox');if(!b)return;const m=SNAP.summ[r.id];
  if(m.c)$('#nUse').onclick=()=>{const e=$('#extra');e.value=e.value.trim()?e.value.trim()+' '+m.c:m.c;save();toast('Added to "Anything else to work in"')}}
 $('#sfRep').onchange=sfLoad;$('#pFind').oninput=renderPipe;
 $$('#pShow button').forEach(b=>b.onclick=()=>{pv.show=b.dataset.v;store.set('cb_pShow',pv.show);renderPipe()});
-$$('#pGroup button').forEach(b=>b.onclick=()=>{pv.group=b.dataset.v;store.set('cb_pGroup2',pv.group);renderPipe()});
+$$('#pGroup button').forEach(b=>b.onclick=()=>{pv.group=b.dataset.v;store.set('cb_pGroup3',pv.group);renderPipe()});
 
 
 // Pipeline snapshot: pipeline.enc (encrypted) + key from the Cold Call Hub sheet's Resources tab, so the data is only readable when signed in
@@ -701,19 +716,19 @@ const isoD=v=>{v=String(v??'').trim();if(!v)return '';let m=v.match(/^(\d{4}-\d{
 async function tabSnap(){const v=await vals('Pipeline!A:Z');if(!v||v.length<2)throw new Error('notab');
  const H={};v[0].forEach((h,i)=>{const k=String(h||'').trim().toLowerCase().replace(/^opportunity\./,'');if(k&&H[k]==null)H[k]=i});
  const col=(...ns)=>{for(const n of ns){const i=H[n.toLowerCase()];if(i!=null)return i}return -1};
- const C={id:col('Id'),acct:col('AccountId'),own:col('OwnerId'),oname:col('Owner.Name'),oemail:col('Owner.Email'),stage:col('StageName'),cr:col('CreatedDate'),cl:col('CloseDate'),la:col('LastActivityDate'),held:col('Held__c'),dh:col('Date_Held__c'),tr:col('Times_Rescheduled__c'),loss:col('Loss_Reason__c'),an:col('Account.Name'),mk:col('Account.Seated_Market__c'),hd:col('Account.Neighborhood__c'),cu:col('Account.Primary_Cuisine__c'),rev:col('Account.Monthly_Revenue_Prediction__c'),gl:col('Account.Group_Locations__c'),lc:col('Last_Call_Date__c'),alc:col('Account.Last_Call_Date__c')};
+ const C={id:col('Id'),acct:col('AccountId'),own:col('OwnerId'),oname:col('Owner.Name'),oemail:col('Owner.Email'),stage:col('StageName'),cr:col('CreatedDate'),cl:col('CloseDate'),la:col('LastActivityDate'),held:col('Held__c'),dh:col('Date_Held__c'),tr:col('Times_Rescheduled__c'),loss:col('Loss_Reason__c'),an:col('Account.Name'),mk:col('Account.Seated_Market__c'),hd:col('Account.Neighborhood__c'),cu:col('Account.Primary_Cuisine__c'),rev:col('Account.Monthly_Revenue_Prediction__c'),gl:col('Account.Group_Locations__c'),lc:col('Last_Call_Date__c'),alc:col('Account.Last_Call_Date__c'),sf:col('Scheduled_FOR__c'),rf:col('Rescheduled_FOR__c')};
  if(C.id<0||C.own<0||C.stage<0)throw new Error('badtab');
  const g=(r,i)=>i<0?'':String(r[i]??'').trim();const owners={},emails={},rows=[];
  for(const r of v.slice(1)){const id=g(r,C.id);if(!/^006/.test(id))continue;const loss=g(r,C.loss);if(loss==='Duplicate Opp')continue;
   const st=g(r,C.stage);if(st==='Closed Lost'&&isoD(g(r,C.cl))<'2026-08-01')continue;if(/^Closed Won$/i.test(st))continue;
   const own=g(r,C.own);if(!own)continue;if(C.oname>=0&&g(r,C.oname))owners[own]=g(r,C.oname);if(C.oemail>=0&&g(r,C.oemail))emails[own]=g(r,C.oemail).toLowerCase();
-  rows.push([id,g(r,C.acct),own,st,isoD(g(r,C.cr)),isoD(g(r,C.cl)),isoD(g(r,C.la)),/^(true|1|yes)$/i.test(g(r,C.held))?1:0,isoD(g(r,C.dh)),Math.round(num(g(r,C.tr))),loss,g(r,C.an),g(r,C.mk),g(r,C.hd),g(r,C.cu),num(g(r,C.rev)),num(g(r,C.gl)),'','',[isoD(g(r,C.lc)),isoD(g(r,C.alc))].sort().pop()||''])}
+  rows.push([id,g(r,C.acct),own,st,isoD(g(r,C.cr)),isoD(g(r,C.cl)),isoD(g(r,C.la)),/^(true|1|yes)$/i.test(g(r,C.held))?1:0,isoD(g(r,C.dh)),Math.round(num(g(r,C.tr))),loss,g(r,C.an),g(r,C.mk),g(r,C.hd),g(r,C.cu),num(g(r,C.rev)),num(g(r,C.gl)),'','',[isoD(g(r,C.lc)),isoD(g(r,C.alc))].sort().pop()||'',g(r,C.sf),g(r,C.rf)])}
  if(!rows.length)throw new Error('notab');Object.keys(owners).forEach(k=>owners[k]=owners[k]||k);rows.forEach(r=>{if(!owners[r[2]])owners[r[2]]='Unknown rep'});
  return {live:true,asOf:new Date().toISOString().slice(0,10),owners,emails,rows,summ:{}}}
 async function loadPipeline(){if(SNAP||PIPE_LOADING)return;PIPE_LOADING=true;sfMsg('Loading your pipeline…');
  try{let d=null,enc=null;try{d=await tabSnap()}catch(e){d=null}
   try{enc=await encSnap()}catch(e){if(!d)throw e}
-  if(d){if(enc){d.summ=enc.summ||{};const ct={};(enc.rows||[]).forEach(r=>{if(r[17]||r[18])ct[r[0]]=[r[17],r[18]]});d.rows.forEach(r=>{const c=ct[r[0]];if(c){r[17]=c[0]||'';r[18]=c[1]||''}});Object.entries(enc.emails||{}).forEach(([k,e])=>{if(!d.emails[k])d.emails[k]=e})}}else d=enc;
+  if(d){if(enc){d.summ=enc.summ||{};const er={};(enc.rows||[]).forEach(r=>{er[r[0]]=r});d.rows.forEach(r=>{const e=er[r[0]];if(!e)return;r[17]=e[17]||'';r[18]=e[18]||'';if(!r[19])r[19]=e[19]||'';if(!r[20]&&!r[21]){r[20]=e[20]||'';r[21]=e[21]||''}});Object.entries(enc.emails||{}).forEach(([k,e])=>{if(!d.emails[k])d.emails[k]=e})}}else d=enc;
   initSnap(d);
   if(!store.get('cb_sfRep','')){let em=ME.email;if(!em){try{em=(JSON.parse(localStorage.getItem('seated_cch_auth')||'null')?.profile?.email)||''}catch(e){}}
    em=String(em||'').toLowerCase();const hit=Object.entries(SNAP.emails||{}).find(([id,e])=>e===em);if(hit)store.set('cb_sfRep',hit[0])}
