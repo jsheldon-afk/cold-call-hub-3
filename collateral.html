@@ -46,7 +46,9 @@ textarea{min-height:56px;resize:vertical}
 .feed button{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:12px;padding:0 4px}
 .tag.played{background:#fde8dc;color:#9a3412;border-color:transparent}
 #sfMsg.warn{color:var(--warn-ink);background:var(--warn);padding:2px 8px;border-radius:6px}
-.sheetbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px;color:var(--muted)}.sheetbar.warn #sheetMsg{color:var(--warn-ink);background:var(--warn);padding:2px 8px;border-radius:6px}
+.sheetbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px;color:var(--muted);margin:0 0 12px}
+.sheetbar.need{background:var(--panel);border:2px solid #1a73e8;border-radius:12px;padding:18px 20px;font-size:16px;color:var(--ink);justify-content:space-between;gap:16px;box-shadow:0 2px 10px rgba(26,115,232,.12)}.sheetbar.need #sheetMsg{flex:1 1 360px;line-height:1.5}.sheetbar.need #sheetMsg b{display:block;font:700 20px var(--display);color:#1a73e8;margin-bottom:2px}
+.gbtn{display:inline-flex;align-items:center;gap:10px;background:#1a73e8;color:#fff;border:0;border-radius:8px;padding:12px 22px;font:600 16px var(--body);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.2);white-space:nowrap}.gbtn svg{background:#fff;border-radius:50%;padding:3px;box-sizing:content-box}.gbtn:hover{background:#1765cc}.gbtn[hidden]{display:none}.sheetbar.warn #sheetMsg{color:var(--warn-ink);background:var(--warn);padding:2px 8px;border-radius:6px}
 .callfirst{background:#c2410c;color:#fff;border-radius:10px;padding:12px 16px;margin:4px 0 14px;font-size:15px;line-height:1.45}.callfirst b{font-size:18px;letter-spacing:.02em;margin-right:6px}
 .push{background:var(--panel);border:2px solid #c2410c;border-radius:10px;padding:12px 16px;margin:0 0 14px;font-size:14px;line-height:1.55;color:var(--ink)}.push:empty{display:none}.push .big{font:700 20px var(--display);color:#c2410c}.push .stg{display:inline-block;font-weight:600;font-size:12.5px;border:1px solid var(--line);border-radius:99px;padding:1px 9px;margin:2px 4px 2px 0;background:var(--bg)}.push .prog{font-weight:700}
 .hubbar{background:var(--accent-soft);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px}.hubbar b{color:var(--accent)}
@@ -122,14 +124,14 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 <div class="wrap">
 <div class="callfirst" role="note"><b>You CALL first.</b> Everything here backs up a conversation. Pick up the phone, then send it while you're on the call or right after.</div>
 <div class="push" id="pushBar"></div>
+<div class="sheetbar" id="sheetBar"><span id="sheetMsg">Connecting to the Cold Call Hub sheet…</span><button type="button" class="gbtn" id="sheetBtn" hidden><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg><span>Sign in with Google</span></button></div>
 <header>
   <h1>Seated Collateral Builder</h1>
   <p class="sub">Collateral for any account. Open it from the Cold Call Hub and it fills in the restaurant. Signed in with your Seated Google account, it reads the Cold Call Hub sheet for market stats, name-droppers, Dinova companies and the current call script. Holiday season is on: Dinova is the default lead. Your inputs stay in this browser.</p>
-  <div class="sheetbar" id="sheetBar"><span id="sheetMsg">Connecting to the Cold Call Hub sheet…</span><button type="button" class="btn ghost" id="sheetBtn" hidden>Sign in with Google</button></div>
 </header>
 <div class="hubbar" id="hubBar" hidden></div>
 <section class="pipe" id="pipe" aria-label="Salesforce pipeline">
-  <div class="bar" style="justify-content:space-between"><h2>Your pipeline</h2><span class="hint" id="sfMsg">Sign in with Google at the top to load your pipeline.</span><button type="button" class="btn ghost" id="sfRetry" hidden>Try again</button></div>
+  <div class="bar" style="justify-content:space-between"><h2>Your pipeline</h2><span class="hint" id="sfMsg">Sign in with Google to load your pipeline.</span><button type="button" class="gbtn" id="pipeSignIn" hidden><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg><span>Sign in with Google</span></button><button type="button" class="btn ghost" id="sfRetry" hidden>Try again</button></div>
   <div class="ptools">
     <label for="sfRep">Rep<select id="sfRep" disabled><option value="">Loading reps…</option></select></label>
     <div><span class="hint">Show</span><div class="seg" id="pShow"><button type="button" data-v="open">Open</button><button type="button" data-v="lost">Lost since Aug</button><button type="button" data-v="all">Both</button></div></div>
@@ -478,7 +480,7 @@ function setMode(){$('#mode').textContent=SAMPLE?'Text is written by Claude on y
 setMode();go();
 
 // Cold Call Hub sheet (read with the viewer's own Google sign-in; nothing is stored in this page)
-const sheetMsg=(t,warn,btn)=>{$('#sheetMsg').textContent=t;$('#sheetBar').classList.toggle('warn',!!warn);$('#sheetBtn').hidden=!btn};
+const sheetMsg=(t,warn,btn)=>{const need=!!btn&&!SHEET.token;$('#sheetMsg').innerHTML=need?`<b>Step 1: Sign in with Google</b>${esc(t)}`:esc(t);$('#sheetBar').classList.toggle('warn',!!warn&&!need);$('#sheetBar').classList.toggle('need',need);$('#sheetBtn').hidden=!btn;const ps=$('#pipeSignIn');if(ps)ps.hidden=!need};
 function storedToken(){for(const k of ['seated_ccb_auth','seated_cch_auth']){try{const a=JSON.parse(localStorage.getItem(k)||'null');if(a&&a.accessToken&&a.expiresAt>Date.now())return a.accessToken}catch(e){}}return null}
 function gsi(){return new Promise((ok,no)=>{if(window.google?.accounts?.oauth2)return ok();const sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';sc.async=true;sc.onload=()=>ok();sc.onerror=()=>no(new Error('gsi'));document.head.appendChild(sc)})}
 async function signIn(){try{await gsi()}catch(e){return sheetMsg('Could not load Google sign-in. Check your connection and reload.',true,true)}
@@ -489,7 +491,7 @@ async function vals(range){const r=await fetch('https://sheets.googleapis.com/v4
 const cmap=h=>{const m={};(h||[]).forEach((x,i)=>m[String(x||'').trim()]=i);return m};
 const num=x=>{const v=parseFloat(String(x??'').replace(/[^0-9.\-]/g,''));return isNaN(v)?0:v};
 function splitTop(t){const out=[];let d=0,cur='';for(const c of String(t||'')){if(c==='(')d++;else if(c===')')d=Math.max(0,d-1);if(c===','&&d===0){if(cur.trim())out.push(cur.trim());cur=''}else cur+=c}if(cur.trim())out.push(cur.trim());return out}
-async function loadSheet(){if(!SHEET.token){sheetMsg('Sign in with your Seated Google account to pull market stats, name-droppers and the call script from the Cold Call Hub sheet.',false,true);return}
+async function loadSheet(){if(!SHEET.token){sheetMsg('Use your Seated Google account. It loads your pipeline, live name-droppers, Dinova companies and the call script, and it\u2019s what lets you log Play Made. One click, and you stay signed in.',false,true);return}
  sheetMsg('Loading the Cold Call Hub sheet…');
  try{const [mk,din,par,scr,bil]=await Promise.all([vals('Markets!A:F'),vals('Dinova!A:C'),vals('Partners!A:S'),vals('Scripts!A2:B').catch(()=>[]),vals('BILT!A:H').catch(()=>[])]);
   const dm={};if(din.length){const H=cmap(din[0]);din.slice(1).forEach(r=>{const m=String(r[H['Seated Market']]||'').trim();if(m)dm[m]={one:String(r[H['To Insert in Script']]||'').trim(),co:String(r[H['To Show in Tab']]||'').split(',').map(x=>x.trim()).filter(Boolean)}})}
@@ -508,7 +510,7 @@ async function loadSheet(){if(!SHEET.token){sheetMsg('Sign in with your Seated G
  catch(e){SHEET.ok=false;if(e.status===401){SHEET.token=null;try{localStorage.removeItem('seated_ccb_auth')}catch(_){}sheetMsg('Your Google sign-in expired. Sign in again to use the sheet.',true,true)}
   else if(e.status===403)sheetMsg('Your Google account can\u2019t open the Cold Call Hub sheet. Ask James for access.',true);
   else sheetMsg('Couldn\u2019t reach the Cold Call Hub sheet just now.',true,true)}}
-$('#sheetBtn').onclick=()=>SHEET.token?loadSheet():signIn();
+$('#sheetBtn').onclick=()=>SHEET.token?loadSheet():signIn();$('#pipeSignIn').onclick=()=>signIn();
 // Cold Call Hub script, read from the sheet's Scripts tab (same text reps see in the hub)
 const OBJ_LABEL={obj_whats_seated:'What\u2019s Seated?',obj_dont_partnerships:'We don\u2019t do partnerships',obj_not_interested:'Not interested',obj_send_email:'Send me an email',obj_cost:'What does it cost?',obj_too_expensive:'Too expensive',obj_used_before:'Used you before',obj_too_busy:'Too busy',obj_what_bilt:'What\u2019s Bilt?'};
 function hubFromSheet(x){const S2=SHEET.scripts,G=(k,d='')=>(S2[k]!=null&&String(S2[k]).trim()!=='')?String(S2[k]):d;
