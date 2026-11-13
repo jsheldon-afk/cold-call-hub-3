@@ -47,6 +47,7 @@ textarea{min-height:56px;resize:vertical}
 .tag.played{background:#fde8dc;color:#9a3412;border-color:transparent}
 #sfMsg.warn{color:var(--warn-ink);background:var(--warn);padding:2px 8px;border-radius:6px}
 .sheetbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px;color:var(--muted)}.sheetbar.warn #sheetMsg{color:var(--warn-ink);background:var(--warn);padding:2px 8px;border-radius:6px}
+.callfirst{background:#c2410c;color:#fff;border-radius:10px;padding:12px 16px;margin:4px 0 14px;font-size:15px;line-height:1.45}.callfirst b{font-size:18px;letter-spacing:.02em;margin-right:6px}
 .hubbar{background:var(--accent-soft);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px}.hubbar b{color:var(--accent)}
 .pipe{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .pipe h2{font-family:var(--display);margin:0;font-size:19px}
@@ -116,6 +117,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 .toast{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:8px 12px;border-radius:8px;font-size:13px;z-index:20}
 </style>
 <div class="wrap">
+<div class="callfirst" role="note"><b>You CALL first.</b> Everything here backs up a conversation. Pick up the phone, then send it while you're on the call or right after.</div>
 <header>
   <h1>Seated Collateral Builder</h1>
   <p class="sub">Collateral for any account. Open it from the Cold Call Hub and it fills in the restaurant. Signed in with your Seated Google account, it reads the Cold Call Hub sheet for market stats, name-droppers, Dinova companies and the current call script. Holiday season is on: Dinova is the default lead. Your inputs stay in this browser.</p>
@@ -372,6 +374,52 @@ function onepager(x){const W=816,H=1056,M=56;let y=0;let s=`<svg xmlns="http://w
  rows.forEach(([a,b])=>{s+=`<line x1="${M}" x2="${W-M}" y1="${y}" y2="${y}" stroke="${VC.line}"/>`;s+=`<text x="${M}" y="${y+26}" fill="${VC.ink}" font-size="15" font-weight="700" font-family='${SANS}'>${esc(a)}</text>`+lines(b,M+200,y+26,62,15,VC.ink,20);y+=16+nLines(b,62)*20+8});
  s+=`<line x1="${M}" x2="${W-M}" y1="${H-74}" y2="${H-74}" stroke="${VC.line}"/><text x="${M}" y="${H-48}" fill="${VC.ink}" font-size="13" font-family='${SANS}'><tspan font-weight="700">${esc(x.seller)}</tspan>${x.title?`<tspan fill="${VC.sub}">, ${esc(x.title)}</tspan>`:''}${x.email?`<tspan fill="${VC.sub}"> · ${esc(x.email)}</tspan>`:''}</text><text x="${W-M}" y="${H-48}" text-anchor="end" fill="${VC.sub}" font-size="13" font-family='${SANS}'>seatedapp.io</text></svg>`;
  return {svg:s,over:y>H-84}}
+// Research visuals (restaurant-facing): NRN / Restaurant Business "Loyalty & the Customer Experience", Oct 2026
+const RSTATS=[
+ {k:'TRAFFIC',big:'38%',lab:'of operators say guests are visiting less often. 31% say guests spend less per visit.',seat:'We fill your slower nights with new local diners.',short:'of operators say guests are visiting less often'},
+ {k:'REGULARS',big:'56%',lab:'of operators say loyalty members visit more often than other guests, down from 64% a year ago.',seat:'Your program rewards guests who already know you. We bring in ones who don’t.',short:'of operators say loyalty members out-visit other guests, down from 64%'},
+ {k:'DISCOUNTS',big:'25%',lab:'of operators call discounts their most impactful loyalty feature, down from 31%.',seat:'Diners pay full price and get the reward you set after the visit.',short:'of operators call discounts their best loyalty feature, down from 31%'},
+ {k:'FIRST-TIME',big:'~70%',lab:'of first-time guests never come back.*',seat:'We re-engage our diners so they become regulars.',short:'of first-time guests never come back*'},
+ {k:'INDEPENDENTS',big:'37%',lab:'of independents have a loyalty program, vs. 80% of chains. Budget, expertise and tech are what stop them.',seat:'No app, no integration, nothing for your staff to run.',short:'of independents have a loyalty program, vs. 80% of chains'}];
+const R_SRC='Source: Nation’s Restaurant News & Restaurant Business, “Loyalty & the Customer Experience” (Oct 2026), survey of nearly 325 restaurant operators, Aug 2026. *Olo, quoted in the same report.';
+function rOrder(x){const f={pricing:'DISCOUNTS',noshow:'FIRST-TIME',dark:'REGULARS',open:'INDEPENDENTS',owner:'INDEPENDENTS'}[x.stage]||'TRAFFIC';return RSTATS.slice().sort((a,b)=>(b.k===f)-(a.k===f))}
+function rHow(x){const ch=lst(x.chans.map(c=>({dinova:'Dinova',bofa:'Bank of America',revolut:'Revolut',app:'the Seated app'}[c])).filter(Boolean))||'Seated’s network';
+ return [['Brings them in',`New local diners from ${ch} who haven’t been to you yet.`],['Brings them back','We keep engaging our diners after the first visit, so they come back and become regulars.'],['Nothing to run','No app, no integration, no staff training. You pay only on meals we send.']]}
+function researchPage(x){const W=816,H=1056,M=56;let y;
+ let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="${VC.bg}"/>`;
+ s+=kick(`Prepared for ${x.biz}${x.contact?' · '+x.contact:''}`.slice(0,58),M,64)+`<image href="${IMG.logo_dark.src}" x="${W-M-130}" y="44" width="130" height="26"/>`;
+ const h1='Most first-time guests never come back. Seated is built to change that.';s+=lines(h1,M,116,38,30,VC.ink,36,{serif:1,w:700});y=116+nLines(h1,38)*36;
+ const lede='Winning a guest once is hard. Getting them to return is harder, and most restaurants don’t have the tools, time or budget to do it. That’s the job Seated does for you.';
+ s+=lines(lede,M,y+4,86,15,VC.sub,21);y+=4+nLines(lede,86)*21+20;
+ // hero
+ const hh=172;s+=`<rect x="${M}" y="${y}" width="${W-2*M}" height="${hh}" rx="14" fill="${VC.dark}"/><text x="${M+28}" y="${y+130}" fill="${VC.fill}" font-size="96" font-weight="700" font-family='${SERIF}'>70%</text>`;
+ s+=`<text x="${M+32}" y="${y+34}" fill="#B8AD9B" font-size="12.5" font-weight="700" letter-spacing="2" font-family='${SANS}'>NEARLY</text>`;
+ s+=lines('of first-time guests don’t return after their visit.*',M+300,y+66,30,22,VC.cream,28,{w:700,serif:1})+lines('Every guest who doesn’t come back is a customer you paid to win and then lost.',M+300,y+128,44,14,'#D9CFBF',19,{it:1});y+=hh+26;
+ // why
+ s+=kick('Why it’s hard to fix on your own',M,y);y+=14;const T=[['37%','of independents have a loyalty program, vs. 80% of chains.'],['Top 3','barriers operators name: budget, staff expertise and tech integration.'],['56%','say loyalty members out-visit other guests, down from 64%. Programs mostly reach regulars.']];
+ const gap=12,cw=(W-2*M-2*gap)/3,cl=Math.floor((cw-28)/6.7),th=Math.max(...T.map(t=>58+nLines(t[1],cl)*18))+8;
+ T.forEach((t,i)=>{const X=M+i*(cw+gap);s+=`<rect x="${X}" y="${y}" width="${cw}" height="${th}" rx="10" fill="${VC.sand}"/><text x="${X+14}" y="${y+44}" fill="${VC.gold}" font-size="32" font-weight="700" font-family='${SERIF}'>${esc(t[0])}</text>`+lines(t[1],X+14,y+68,cl,13,VC.ink,18)});y+=th+30;
+ // how
+ s+=kick('How Seated turns first visits into regulars',M,y);y+=10;
+ rHow(x).forEach(([a,b])=>{s+=`<line x1="${M}" x2="${W-M}" y1="${y}" y2="${y}" stroke="${VC.line}"/><text x="${M}" y="${y+26}" fill="${VC.ink}" font-size="15" font-weight="700" font-family='${SANS}'>${esc(a)}</text>`+lines(b,M+180,y+26,74,15,VC.ink,20);y+=16+nLines(b,74)*20+6});
+ y+=20;
+ const est=x.g?`For ${x.biz}, we estimate about ${up(x.g).replace('+','')} a month in new diner spend${x.locs>1?` across ${x.locs} locations`:''}.`:'';
+ if(x.nd.length){s+=kick(x.mkt?`Already live with Seated in ${x.mkt}`:'Already live with Seated',M,y);y+=12;const c=chips(x.nd.slice(0,4),M,y,W-2*M,1);s+=c.svg;y+=c.h+14}
+ if(est){s+=lines(est,M,y+12,90,14.5,VC.ink,20,{w:700});y+=12+nLines(est,90)*20}
+ const src='*Olo, quoted in Nation’s Restaurant News & Restaurant Business, “Loyalty & the Customer Experience” (Oct 2026). Other figures: the same report’s survey of nearly 325 restaurant operators, Aug 2026.';
+ s+=lines(src,M,y+20,118,10.5,VC.sub,14);y+=20+nLines(src,118)*14;
+ s+=`<line x1="${M}" x2="${W-M}" y1="${H-74}" y2="${H-74}" stroke="${VC.line}"/><text x="${M}" y="${H-48}" fill="${VC.ink}" font-size="13" font-family='${SANS}'><tspan font-weight="700">${esc(x.seller)}</tspan>${x.title?`<tspan fill="${VC.sub}">, ${esc(x.title)}</tspan>`:''}${x.email?`<tspan fill="${VC.sub}"> · ${esc(x.email)}</tspan>`:''}</text><text x="${W-M}" y="${H-48}" text-anchor="end" fill="${VC.sub}" font-size="13" font-family='${SANS}'>seatedapp.io</text></svg>`;
+ return {svg:s,over:y>H-84}}
+function researchCard(x){const W=1200,H=628,M=60,lw=620;
+ let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="${VC.cream}"/>`+kick(`For ${x.biz}`.slice(0,44),M,72);
+ s+=`<text x="${M}" y="118" fill="${VC.sub}" font-size="15" font-weight="700" letter-spacing="2" font-family='${SANS}'>NEARLY</text><text x="${M-4}" y="246" fill="${VC.gold}" font-size="150" font-weight="700" font-family='${SERIF}'>70%</text>`;
+ const hl='of first-time guests never come back.*';s+=lines(hl,M,300,42,30,VC.ink,36,{serif:1,w:700});let y=300+nLines(hl,42)*36+8;
+ const bar='Most restaurants aren’t equipped to win them back. Seated is.';const bl=Math.floor((lw-44)/10.4),n=nLines(bar,bl),bh=Math.max(76,34+n*27);
+ s+=`<rect x="${M}" y="${y}" width="${lw}" height="${bh}" rx="12" fill="${VC.dark}"/>`+lines(bar,M+22,y+(bh-n*27)/2+20,bl,21,VC.fill,27,{w:700});y+=bh;
+ const rx=M+lw+40,rw=W-M-rx,bx=Math.floor((rw-36)/7.9);let ry=78;const each=(H-78-112-2*14)/3;
+ rHow(x).forEach(([a,b])=>{s+=`<rect x="${rx}" y="${ry}" width="${rw}" height="${each}" rx="10" fill="${VC.bg}"/><text x="${rx+18}" y="${ry+34}" fill="${VC.ink}" font-size="18" font-weight="700" font-family='${SANS}'>${esc(a)}</text>`+lines(b,rx+18,ry+60,bx,15,'#4A443C',20);ry+=each+14});
+ s+=lines('*Olo, quoted in Nation’s Restaurant News & Restaurant Business, “Loyalty & the Customer Experience” (Oct 2026).',M,H-74,150,11,VC.sub,14)+`<text x="${M}" y="${H-40}" fill="${VC.sub}" font-size="15" font-family='${SANS}'>No upfront cost · Nothing changes at the host stand · Pay only on meals we send</text><image href="${IMG.logo_dark.src}" x="${W-M-120}" y="${H-58}" width="120" height="24"/></svg>`;
+ return {svg:s,over:y>H-90}}
 function card(x){const W=1200,H=628,M=60;const k=x.P.img||'dinova';const land=IMG[k].w>IMG[k].h;const sh=img(k,0,0,land?460:300,land?320:400);const ix=W-M-sh.w,iy=Math.round(110+(400-sh.h)/2);const s2=img(k,ix,iy,land?460:300,land?320:400);const tw=ix-M-40;
  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><rect width="${W}" height="${H}" fill="${VC.cream}"/>`+kick(`For ${x.biz}`.slice(0,44),M,72);
  const hl=Math.floor(tw/21);s+=lines(HEAD(x),M,128,hl,40,VC.ink,46,{serif:1,w:700});let y=128+nLines(HEAD(x),hl)*46+18;
@@ -379,7 +427,7 @@ function card(x){const W=1200,H=628,M=60;const k=x.P.img||'dinova';const land=IM
  {const ol=Math.floor(tw/12.5),n=nLines(offerBox(),ol);s+=`<rect x="${M}" y="${y}" width="${tw}" height="76" rx="12" fill="${VC.dark}"/>`+lines(offerBox(),M+22,y+(n>1?32:46),ol,22,VC.fill,26,{w:700})}
  s+=s2.svg+`<text x="${M}" y="${H-46}" fill="${VC.sub}" font-size="16" font-family='${SANS}'>No upfront cost · Nothing changes at the host stand · Pay only on meals we send</text><image href="${IMG.logo_dark.src}" x="${W-M-120}" y="${H-66}" width="120" height="24"/></svg>`;return {svg:s,over:y+76>H-60}}
 // builder
-const KINDS=[['tp','Talking points','for you, not to send'],['research','Industry research','stats for calls'],['exec','CRO note from Gradie','exec email, all value'],['email','Email','right for their history'],['seq','3-email sequence','today / +3 / +6 days'],['sms','Texts','2 short texts'],['call','Call script','rebook or follow-up'],['li','LinkedIn / IG DM','to owner or GM'],['onepager','One-pager','visual, letter size'],['card','Offer card','visual, 1200×628']];
+const KINDS=[['tp','Talking points','for you, not to send'],['research','Industry research','stats for calls'],['exec','CRO note from Gradie','exec email, all value'],['email','Email','right for their history'],['seq','3-email sequence','today / +3 / +6 days'],['sms','Texts','2 short texts'],['call','Call script','rebook or follow-up'],['li','LinkedIn / IG DM','to owner or GM'],['onepager','One-pager','visual, letter size'],['card','Offer card','visual, 1200×628'],['rpage','Research one-pager','industry stats, letter size'],['rcard','Research card','industry stats, 1200×628']];
 let kind=store.get('cb_kind','exec');if(!KINDS.some(k=>k[0]===kind))kind='exec';
 $('#kinds').innerHTML=KINDS.map(([k,l,s])=>`<button class="kind" data-k="${k}" aria-pressed="${k===kind}">${esc(l)}<small>${esc(s)}</small></button>`).join('');
 $('#kinds').querySelectorAll('.kind').forEach(b=>b.onclick=()=>{kind=b.dataset.k;store.set('cb_kind',kind);$('#kinds').querySelectorAll('.kind').forEach(x=>x.setAttribute('aria-pressed',x===b));go()});
@@ -387,7 +435,7 @@ let SAMPLE=null,DL=null,ctl=null,lastSvg=null,lastText='';
 function warn(x){const w=[];if(!$('#biz').value.trim())w.push('Add the business name.');if(!x.g)w.push('No expected GMV, so the copy leaves the number out.');if(!x.nd.length)w.push('No name-droppers yet. Two or three makes the copy much stronger.');if(x.auto)w.push(`No name-droppers picked, so this uses the top matches: ${x.nd.join(', ')}. Check they fit before sending.`);if(x.chans.includes('revolut'))w.push('Confirm Revolut is available in this market before sending.');if(!x.mkt)w.push('Pick a market to pull Dinova companies and name-droppers.');
  $('#oWarn').hidden=!w.length;$('#oWarn').textContent=w.join(' ')}
 async function go(){fillPlays();const x=ctx();warn(x);const lab=KINDS.find(k=>k[0]===kind)[1];$('#oTitle').textContent=`${lab} · ${x.biz}`;$('#oVis').innerHTML='';$('#oText').textContent='';lastSvg=null;['#oSvg','#oPng','#oCopy'].forEach(s=>$(s).hidden=true);
- if(kind==='onepager'||kind==='card'){const r=(kind==='card'?card:onepager)(x);lastSvg=r.svg;$('#oVis').innerHTML=r.svg;if(r.over)$('#oText').textContent='This is running long. Trim the name-droppers or channels so it fits.';$('#oSvg').hidden=false;$('#oPng').hidden=false;return}
+ if(kind==='onepager'||kind==='card'||kind==='rpage'||kind==='rcard'){const r=({card,onepager,rpage:researchPage,rcard:researchCard})[kind](x);lastSvg=r.svg;$('#oVis').innerHTML=r.svg;if(r.over)$('#oText').textContent='This is running long. Trim the name-droppers or channels so it fits.';$('#oSvg').hidden=false;$('#oPng').hidden=false;return}
  if(kind==='research'){lastText=industryResearch(x);showText(lastText);$('#oCopy').hidden=false;return}
  if(kind==='tp'){lastText=talkingPoints(x);showText(lastText);$('#oCopy').hidden=false;return}
  if(kind==='hub'){lastText=hub(x);showText(lastText);$('#oCopy').hidden=false;return}
@@ -559,7 +607,7 @@ function sfErr(e){const c=e?.code;
  if(c==='cancelled')return;
  sfMsg('Could not reach Salesforce just now.',true,true)}
 var SNAP=null,SNAP_ROWS=[],asOfTxt='';
-function initSnap(d){SNAP=d;SNAP_ROWS=SNAP.rows.map(r=>({Id:r[0],AccountId:r[1],OwnerId:r[2],StageName:r[3],CreatedDate:r[4],CloseDate:r[5],LastActivityDate:r[6]||null,Held__c:!!r[7],Date_Held__c:r[8]||null,Times_Rescheduled__c:r[9],Loss_Reason__c:r[10]||null,Account:{Name:r[11],Seated_Market__c:r[12]||null,Neighborhood__c:r[13]||null,Primary_Cuisine__c:r[14]||null,Monthly_Revenue_Prediction__c:r[15]||null,Group_Locations__c:r[16]||0},OpportunityContactRoles:{records:[{Contact:{FirstName:r[17]||'',Title:r[18]||''}}]}}));
+function initSnap(d){SNAP=d;SNAP_ROWS=SNAP.rows.map(r=>({Id:r[0],AccountId:r[1],OwnerId:r[2],StageName:r[3],CreatedDate:r[4],CloseDate:r[5],LastActivityDate:r[6]||null,Held__c:!!r[7],Date_Held__c:r[8]||null,Times_Rescheduled__c:r[9],Loss_Reason__c:r[10]||null,Account:{Name:r[11],Seated_Market__c:r[12]||null,Neighborhood__c:r[13]||null,Primary_Cuisine__c:r[14]||null,Monthly_Revenue_Prediction__c:r[15]||null,Group_Locations__c:r[16]||0},OpportunityContactRoles:{records:[{Contact:{FirstName:r[17]||'',Title:r[18]||''}}]},LastCall:r[19]||null}));
 asOfTxt=SNAP.live?'Live from Salesforce, refreshed every 4 hours':'Salesforce snapshot from '+new Date(SNAP.asOf+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 function sfReps(){const n={};SNAP_ROWS.forEach(o=>{n[o.OwnerId]=(n[o.OwnerId]||0)+(o.StageName!=='Closed Lost'?1:0)});
  const ids=Object.keys(SNAP.owners).sort((a,b)=>SNAP.owners[a].localeCompare(SNAP.owners[b]));const last=store.get('cb_sfRep','');
@@ -576,10 +624,10 @@ function score(r){const why=[];let s=0;const t=today();
  else{if(LATE.includes(r.stage)){s+=30;why.push('late stage')}else s+=ST_PTS[r.stage]??8;
   if(r.age>90){s-=8;why.push('open '+r.age+'d')}}
  if(r.demo==='held'){s+=10;why.push('saw the pitch')}
- if(r.last){const d=Math.round((t-r.last)/DAY);
-  if(d<0){s+=4;if(d>=-3&&!r.lost&&r.demo==='sched'){s+=15;why.push('demo in '+(-d)+'d, prep it')}else why.push('next step on calendar')}
-  else if(!r.lost){if(d<=7)s+=10;else if(d<=21)s+=6;else if(d<=45)s+=2;else{s-=6;why.push('no touch in '+d+'d')}}}
- else if(!r.lost){s-=4;why.push('no activity logged')}
+ if(r.next){const d=Math.round((r.next-t)/DAY);s+=4;if(d<=3&&!r.lost&&r.demo==='sched'){s+=15;why.push('demo in '+d+'d, prep it')}else why.push('next step on calendar')}
+ const lc=r.lastCall||(r.last&&r.last<=t?r.last:null);
+ if(lc){if(!r.lost){const d=Math.max(0,Math.round((t-lc)/DAY));if(d<=7)s+=10;else if(d<=21)s+=6;else if(d<=45)s+=2;else{s-=6;why.push('no call in '+d+'d')}}}
+ else if(!r.lost&&!r.next){s-=4;why.push('no calls logged')}
  s=Math.max(0,Math.round(s));return {score:s,tier:s>=58?1:s>=45?2:s>=30?3:4,why:why.slice(0,3)}}
 const TIER=['','Work today','This week','When you have time','Low priority'];
 function shape(o){const a=o.Account||{},c=o.OpportunityContactRoles?.records?.[0]?.Contact||{},lost=o.StageName==='Closed Lost';const t=today();
@@ -587,7 +635,7 @@ function shape(o){const a=o.Account||{},c=o.OpportunityContactRoles?.records?.[0
  const missed=!held&&(MISSED_ST.includes(o.StageName)||o.Loss_Reason__c==='Missed Meeting'||(o.Times_Rescheduled__c||0)>0);
  const demo=held?'held':missed?'missed':(!lost&&SCHED_ST.includes(o.StageName))?'sched':'none';
  const age=lost?(closed?Math.max(0,Math.round((t-closed)/DAY)):0):(created?Math.max(0,Math.round((t-created)/DAY)):0);
- return {id:o.Id,o,a,c,lost,biz:a.Name||o.Name,mkt:a.Seated_Market__c||'',gmv:a.Monthly_Revenue_Prediction__c||0,stage:o.StageName||'',loss:o.Loss_Reason__c||'',demo,heldOn:dt(o.Date_Held__c),age,last:dt(o.LastActivityDate),resch:o.Times_Rescheduled__c||0,notes:SNAP.summ[o.Id]?'y':''}}
+ return {id:o.Id,o,a,c,lost,biz:a.Name||o.Name,mkt:a.Seated_Market__c||'',gmv:a.Monthly_Revenue_Prediction__c||0,stage:o.StageName||'',loss:o.Loss_Reason__c||'',demo,heldOn:dt(o.Date_Held__c),age,last:dt(o.LastActivityDate),lastCall:dt(o.LastCall),next:(()=>{const d=dt(o.LastActivityDate);return d&&d>t?d:null})(),resch:o.Times_Rescheduled__c||0,notes:SNAP.summ[o.Id]?'y':''}}
 const shapeS=o=>{const r=shape(o);return Object.assign(r,score(r))};
 function sfLoad(){const id=$('#sfRep').value;store.set('cb_sfRep',id);SF_ROWS=[];SF_SEL='';$('#pNote').hidden=true;
  if(!SNAP.owners[id]){$('#pTable').hidden=true;$('#pSum').innerHTML='';sfMsg(`${asOfTxt}. Pick yourself to see your pipeline.`);return}
@@ -607,14 +655,14 @@ function renderPipe(){PK_SET=new Set(plays().map(p=>p.acct));$$('#pShow button')
  const open=SF_ROWS.filter(r=>!r.lost),lost=SF_ROWS.filter(r=>r.lost),sum=a=>a.reduce((t,r)=>t+r.gmv,0);
  $('#pSum').innerHTML=`<span><b>${open.length}</b> open · <b>${money(sum(open))||'$0'}</b>/mo predicted</span><span><b>${open.filter(r=>r.demo==='held').length}</b> held · <b>${open.filter(r=>r.demo==='missed').length}</b> missed</span><span><b>${lost.length}</b> lost since Aug · <b>${money(sum(lost))||'$0'}</b>/mo to win back</span>`;
  if(!rows.length){$('#pTable').hidden=false;$('#pTable').innerHTML=`<p class="hint" style="padding:12px;margin:0">${SF_ROWS.length?'Nothing matches.':'No open or recently lost opportunities.'}</p>`;return}
- const key={score:r=>r.score,gmv:r=>r.gmv,biz:r=>r.biz.toLowerCase(),age:r=>r.age,last:r=>r.last?+r.last:0,stage:r=>r.lost?'~'+r.loss:r.stage,demo:r=>r.demo}[pv.sort];
+ const key={score:r=>r.score,gmv:r=>r.gmv,biz:r=>r.biz.toLowerCase(),age:r=>r.age,last:r=>r.lastCall?+r.lastCall:0,stage:r=>r.lost?'~'+r.loss:r.stage,demo:r=>r.demo}[pv.sort];
  const groups=new Map();rows.forEach(r=>{const g=grpOf(r);if(!groups.has(g.k))groups.set(g.k,{...g,rows:[]});groups.get(g.k).rows.push(r)});
  const gs=[...groups.values()].sort((a,b)=>a.ord-b.ord||a.label.localeCompare(b.label));
  const th=(k,l,c='')=>`<th data-s="${k}" class="${c}">${l}${pv.sort===k?(pv.dir<0?' ↓':' ↑'):''}</th>`;
- let h=`<table><thead><tr>${th('biz','Restaurant')}${th('score','Priority','num')}${th('stage','Stage')}${th('demo','Demo')}${th('age','Age','num')}${th('last','Last activity')}${th('gmv','Pred. GMV / mo','num')}</tr></thead><tbody>`;
+ let h=`<table><thead><tr>${th('biz','Restaurant')}${th('score','Priority','num')}${th('stage','Stage')}${th('demo','Demo')}${th('age','Age','num')}${th('last','Last call')}${th('gmv','Pred. GMV / mo','num')}</tr></thead><tbody>`;
  for(const g of gs){g.rows.sort((a,b)=>{const x=key(a),y=key(b);return (x<y?-1:x>y?1:0)*pv.dir});
   h+=`<tr class="grp"><td colspan="7">${esc(g.label)}<small>${g.rows.length} · ${money(sum(g.rows))||'$0'}/mo</small></td></tr>`;
-  h+=g.rows.map(r=>`<tr class="row${r.id===SF_SEL?' sel':''}" data-id="${esc(r.id)}" tabindex="0"><td>${esc(r.biz)}${r.notes?' <span class="tag" title="Has a meeting notes summary">Notes</span>':''}${PK_SET.has(r.o.AccountId)?' <span class="tag played" title="A play was logged on this account">Played</span>':''}${r.mkt?`<br><small>${esc(r.mkt)}</small>`:''}${r.why.length?`<span class="why">${esc(r.why.join(' · '))}</span>`:''}</td><td class="num"><span class="tag${r.tier<3?' p'+r.tier:''}">${r.score}</span></td><td>${r.lost?`<span class="tag lost">Lost</span> ${esc(LOSS[r.loss]||r.loss||'')}`:esc(r.stage)}</td><td>${demoTag(r)}</td><td class="num">${r.lost?`${r.age}d ago`:`${r.age}d`}</td><td>${esc(fmtD(r.last))}</td><td class="num">${money(r.gmv)||'<small>none</small>'}</td></tr>`).join('')}
+  h+=g.rows.map(r=>`<tr class="row${r.id===SF_SEL?' sel':''}" data-id="${esc(r.id)}" tabindex="0"><td>${esc(r.biz)}${r.notes?' <span class="tag" title="Has a meeting notes summary">Notes</span>':''}${PK_SET.has(r.o.AccountId)?' <span class="tag played" title="A play was logged on this account">Played</span>':''}${r.mkt?`<br><small>${esc(r.mkt)}</small>`:''}${r.why.length?`<span class="why">${esc(r.why.join(' · '))}</span>`:''}</td><td class="num"><span class="tag${r.tier<3?' p'+r.tier:''}">${r.score}</span></td><td>${r.lost?`<span class="tag lost">Lost</span> ${esc(LOSS[r.loss]||r.loss||'')}`:esc(r.stage)}</td><td>${demoTag(r)}</td><td class="num">${r.lost?`${r.age}d ago`:`${r.age}d`}</td><td>${r.lastCall?`${esc(fmtD(r.lastCall))}<br><small>${Math.max(0,Math.round((today()-r.lastCall)/DAY))}d ago</small>`:'<small>none logged</small>'}${r.next?`<br><small>Next: ${esc(fmtD(r.next))}</small>`:''}</td><td class="num">${money(r.gmv)||'<small>none</small>'}</td></tr>`).join('')}
  $('#pTable').innerHTML=h+'</tbody></table>';$('#pTable').hidden=false;
  $$('#pTable th').forEach(t=>t.onclick=()=>{const k=t.dataset.s;if(pv.sort===k)pv.dir*=-1;else{pv.sort=k;pv.dir=(k==='biz'||k==='stage')?1:-1}renderPipe()});
  $$('#pTable tr.row').forEach(t=>{t.onclick=()=>sfFill(t.dataset.id);t.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();sfFill(t.dataset.id)}}})}
@@ -624,11 +672,11 @@ function sfFill(id){const r=SF_ROWS.find(x=>x.id===id);if(!r)return;SF_SEL=id;co
  $('#locs').value=String(a.Group_Locations__c>1?Math.round(a.Group_Locations__c):1);$('#aov').value='';$('#ndNote').value='';$('#extra').value='';ND=[];
  renderMkt();$('#gmv').value=r.gmv?String(Math.round(r.gmv)):'';
  let st=r.lost?LOSS_ST[r.loss]:OPEN_ST[r.stage];if(!st)st=r.demo==='held'?'dark':r.demo==='missed'?'noshow':'unsched';$('#stage').value=st;
- const when=r.heldOn||(r.last&&r.last<=today()?r.last:null);$('#month').value=when?when.toLocaleString('en-US',{month:'long'}):'';
+ const when=r.lastCall||r.heldOn||(r.last&&r.last<=today()?r.last:null);$('#month').value=when?when.toLocaleString('en-US',{month:'long'}):'';
  const rv=$('#ch_revolut');if(rv&&!rv.dataset.touched)rv.checked=/Miami|New York/.test($('#mkt').value);
  renderND();renderSugg();fillPlays();save();renderPipe();
  const box=$('#pNote');box.hidden=false;
- box.innerHTML=`<p>Loaded <b>${esc(r.biz)}</b> (${esc(r.lost?'lost: '+(LOSS[r.loss]||r.loss||'no reason'):r.stage)}). History set to "${esc($('#stage').selectedOptions[0]?.textContent||'')}". ${r.gmv?'':'No predicted revenue on the account, so the copy leaves the number out. '}Check the form, then Build it.</p>${o.Loss_Details__c?`<p><b>Loss details:</b> ${esc(plain(o.Loss_Details__c))}</p>`:''}<div id="nBox"></div>`;
+ box.innerHTML=`<p>Loaded <b>${esc(r.biz)}</b> (${esc(r.lost?'lost: '+(LOSS[r.loss]||r.loss||'no reason'):r.stage)}). History set to "${esc($('#stage').selectedOptions[0]?.textContent||'')}". ${r.gmv?'':'No predicted revenue on the account, so the copy leaves the number out. '}${r.lastCall?`Last call: ${esc(fmtD(r.lastCall))} (${Math.max(0,Math.round((today()-r.lastCall)/DAY))} days ago). `:'No calls logged on this account. '}Check the form, then Build it.</p>${o.Loss_Details__c?`<p><b>Loss details:</b> ${esc(plain(o.Loss_Details__c))}</p>`:''}<div id="nBox"></div>`;
  renderNotes(r);
  if(matchMedia('(max-width:920px)').matches)$('#f').scrollIntoView({behavior:'smooth'});toast('Loaded '+r.biz)}
 
@@ -653,13 +701,13 @@ const isoD=v=>{v=String(v??'').trim();if(!v)return '';let m=v.match(/^(\d{4}-\d{
 async function tabSnap(){const v=await vals('Pipeline!A:Z');if(!v||v.length<2)throw new Error('notab');
  const H={};v[0].forEach((h,i)=>{const k=String(h||'').trim().toLowerCase().replace(/^opportunity\./,'');if(k&&H[k]==null)H[k]=i});
  const col=(...ns)=>{for(const n of ns){const i=H[n.toLowerCase()];if(i!=null)return i}return -1};
- const C={id:col('Id'),acct:col('AccountId'),own:col('OwnerId'),oname:col('Owner.Name'),oemail:col('Owner.Email'),stage:col('StageName'),cr:col('CreatedDate'),cl:col('CloseDate'),la:col('LastActivityDate'),held:col('Held__c'),dh:col('Date_Held__c'),tr:col('Times_Rescheduled__c'),loss:col('Loss_Reason__c'),an:col('Account.Name'),mk:col('Account.Seated_Market__c'),hd:col('Account.Neighborhood__c'),cu:col('Account.Primary_Cuisine__c'),rev:col('Account.Monthly_Revenue_Prediction__c'),gl:col('Account.Group_Locations__c')};
+ const C={id:col('Id'),acct:col('AccountId'),own:col('OwnerId'),oname:col('Owner.Name'),oemail:col('Owner.Email'),stage:col('StageName'),cr:col('CreatedDate'),cl:col('CloseDate'),la:col('LastActivityDate'),held:col('Held__c'),dh:col('Date_Held__c'),tr:col('Times_Rescheduled__c'),loss:col('Loss_Reason__c'),an:col('Account.Name'),mk:col('Account.Seated_Market__c'),hd:col('Account.Neighborhood__c'),cu:col('Account.Primary_Cuisine__c'),rev:col('Account.Monthly_Revenue_Prediction__c'),gl:col('Account.Group_Locations__c'),lc:col('Last_Call_Date__c'),alc:col('Account.Last_Call_Date__c')};
  if(C.id<0||C.own<0||C.stage<0)throw new Error('badtab');
  const g=(r,i)=>i<0?'':String(r[i]??'').trim();const owners={},emails={},rows=[];
  for(const r of v.slice(1)){const id=g(r,C.id);if(!/^006/.test(id))continue;const loss=g(r,C.loss);if(loss==='Duplicate Opp')continue;
   const st=g(r,C.stage);if(st==='Closed Lost'&&isoD(g(r,C.cl))<'2026-08-01')continue;if(/^Closed Won$/i.test(st))continue;
   const own=g(r,C.own);if(!own)continue;if(C.oname>=0&&g(r,C.oname))owners[own]=g(r,C.oname);if(C.oemail>=0&&g(r,C.oemail))emails[own]=g(r,C.oemail).toLowerCase();
-  rows.push([id,g(r,C.acct),own,st,isoD(g(r,C.cr)),isoD(g(r,C.cl)),isoD(g(r,C.la)),/^(true|1|yes)$/i.test(g(r,C.held))?1:0,isoD(g(r,C.dh)),Math.round(num(g(r,C.tr))),loss,g(r,C.an),g(r,C.mk),g(r,C.hd),g(r,C.cu),num(g(r,C.rev)),num(g(r,C.gl)),'',''])}
+  rows.push([id,g(r,C.acct),own,st,isoD(g(r,C.cr)),isoD(g(r,C.cl)),isoD(g(r,C.la)),/^(true|1|yes)$/i.test(g(r,C.held))?1:0,isoD(g(r,C.dh)),Math.round(num(g(r,C.tr))),loss,g(r,C.an),g(r,C.mk),g(r,C.hd),g(r,C.cu),num(g(r,C.rev)),num(g(r,C.gl)),'','',[isoD(g(r,C.lc)),isoD(g(r,C.alc))].sort().pop()||''])}
  if(!rows.length)throw new Error('notab');Object.keys(owners).forEach(k=>owners[k]=owners[k]||k);rows.forEach(r=>{if(!owners[r[2]])owners[r[2]]='Unknown rep'});
  return {live:true,asOf:new Date().toISOString().slice(0,10),owners,emails,rows,summ:{}}}
 async function loadPipeline(){if(SNAP||PIPE_LOADING)return;PIPE_LOADING=true;sfMsg('Loading your pipeline…');
