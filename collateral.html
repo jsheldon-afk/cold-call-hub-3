@@ -379,7 +379,7 @@ function card(x){const W=1200,H=628,M=60;const k=x.P.img||'dinova';const land=IM
  {const ol=Math.floor(tw/12.5),n=nLines(offerBox(),ol);s+=`<rect x="${M}" y="${y}" width="${tw}" height="76" rx="12" fill="${VC.dark}"/>`+lines(offerBox(),M+22,y+(n>1?32:46),ol,22,VC.fill,26,{w:700})}
  s+=s2.svg+`<text x="${M}" y="${H-46}" fill="${VC.sub}" font-size="16" font-family='${SANS}'>No upfront cost · Nothing changes at the host stand · Pay only on meals we send</text><image href="${IMG.logo_dark.src}" x="${W-M-120}" y="${H-66}" width="120" height="24"/></svg>`;return {svg:s,over:y+76>H-60}}
 // builder
-const KINDS=[['tp','Talking points','for you, not to send'],['exec','CRO note from Gradie','exec email, all value'],['email','Email','right for their history'],['seq','3-email sequence','today / +3 / +6 days'],['sms','Texts','2 short texts'],['call','Call script','rebook or follow-up'],['li','LinkedIn / IG DM','to owner or GM'],['onepager','One-pager','visual, letter size'],['card','Offer card','visual, 1200×628']];
+const KINDS=[['tp','Talking points','for you, not to send'],['research','Industry research','stats for calls'],['exec','CRO note from Gradie','exec email, all value'],['email','Email','right for their history'],['seq','3-email sequence','today / +3 / +6 days'],['sms','Texts','2 short texts'],['call','Call script','rebook or follow-up'],['li','LinkedIn / IG DM','to owner or GM'],['onepager','One-pager','visual, letter size'],['card','Offer card','visual, 1200×628']];
 let kind=store.get('cb_kind','exec');if(!KINDS.some(k=>k[0]===kind))kind='exec';
 $('#kinds').innerHTML=KINDS.map(([k,l,s])=>`<button class="kind" data-k="${k}" aria-pressed="${k===kind}">${esc(l)}<small>${esc(s)}</small></button>`).join('');
 $('#kinds').querySelectorAll('.kind').forEach(b=>b.onclick=()=>{kind=b.dataset.k;store.set('cb_kind',kind);$('#kinds').querySelectorAll('.kind').forEach(x=>x.setAttribute('aria-pressed',x===b));go()});
@@ -388,6 +388,7 @@ function warn(x){const w=[];if(!$('#biz').value.trim())w.push('Add the business 
  $('#oWarn').hidden=!w.length;$('#oWarn').textContent=w.join(' ')}
 async function go(){fillPlays();const x=ctx();warn(x);const lab=KINDS.find(k=>k[0]===kind)[1];$('#oTitle').textContent=`${lab} · ${x.biz}`;$('#oVis').innerHTML='';$('#oText').textContent='';lastSvg=null;['#oSvg','#oPng','#oCopy'].forEach(s=>$(s).hidden=true);
  if(kind==='onepager'||kind==='card'){const r=(kind==='card'?card:onepager)(x);lastSvg=r.svg;$('#oVis').innerHTML=r.svg;if(r.over)$('#oText').textContent='This is running long. Trim the name-droppers or channels so it fits.';$('#oSvg').hidden=false;$('#oPng').hidden=false;return}
+ if(kind==='research'){lastText=industryResearch(x);showText(lastText);$('#oCopy').hidden=false;return}
  if(kind==='tp'){lastText=talkingPoints(x);showText(lastText);$('#oCopy').hidden=false;return}
  if(kind==='hub'){lastText=hub(x);showText(lastText);$('#oCopy').hidden=false;return}
  if(!SAMPLE){lastText=tmpl(kind,x);showText(lastText);$('#oCopy').hidden=false;return}
@@ -409,7 +410,7 @@ function showText(t){const el=$('#oText');t=String(t||'');
  for(const b of blocks){const lines=b.split('\n');
   for(let i=0;i<lines.length;i++){const raw=lines[i],L=raw.trim();if(!L)continue;const e=esc(L);
    if(/^[-—–]{1,3}$/.test(L)){out+='<hr>';continue}
-   if(first&&/^(Talking points|Call script|Script)\b/i.test(L)){out+=`<div class="tx-title">${e}</div>`;first=false;continue}
+   if(first&&/^(Talking points|Industry research|Call script|Script)\b/i.test(L)){out+=`<div class="tx-title">${e}</div>`;first=false;continue}
    first=false;
    if(/^["“]?[A-Z0-9][A-Z0-9 '’"“”?&\/()\-]{2,48}$/.test(L)&&/[A-Z]{3}/.test(L)&&!/[a-z]/.test(L)){out+=`<div class="tx-h">${e}</div>`;continue}
    if(/^(Email|Text) \d+( \([^)]*\))?:?$/.test(L)||(/^[A-Z][^.:!?]{1,40}:$/.test(L))){out+=`<div class="tx-h">${esc(L.replace(/:$/,''))}</div>`;continue}
@@ -468,6 +469,24 @@ function hubFromSheet(x){const S2=SHEET.scripts,G=(k,d='')=>(S2[k]!=null&&String
  const ok=Object.keys(S2).filter(k=>k.startsWith('obj_')&&G(k));if(ok.length)out+=`Objections\n${ok.map(k=>`${OBJ_LABEL[k]||k.slice(4).replace(/_/g,' ')}: ${F(G(k))}`).join('\n\n')}`;
  return out.trim()}
 
+// Industry research (rep-facing): NRN / Restaurant Business "Loyalty & the Customer Experience" (Oct 2026; survey of ~320 operators, Aug 2026)
+function industryResearch(x){
+ const first={pricing:'DISCOUNTS',cold:'TRAFFIC',unsched:'TRAFFIC',noshow:'FIRST-TIME',dark:'REGULARS',open:'INDEPENDENTS',owner:'INDEPENDENTS',timing:'TRAFFIC',upcoming:'TRAFFIC'}[x.stage]||'TRAFFIC';
+ const S=[
+ ['TRAFFIC','TRAFFIC IS DOWN',`38% of operators say guests are visiting less often, and 31% say guests spend less per visit (up from 28% a year earlier). Full-service restaurants feel it most: 40% report fewer visits and 35% a lower average check.`,`"We fill your slower nights with new local diners."`],
+ ['REGULARS','LOYALTY PROGRAMS MOSTLY REACH REGULARS',`The share of operators who say loyalty members visit more often than non-members fell from 64% to 56% in a year.`,`"Your program rewards guests who already know you. We bring in ones who don't."`],
+ ['DISCOUNTS','OPERATORS ARE PULLING BACK ON DISCOUNTS',`Operators naming discounts their most impactful loyalty feature fell from 31% to 25%, and fewer programs include discounts at all (58%, down 7 points).`,`"Diners pay full price and get the reward you set after the visit."`],
+ ['FIRST-TIME','MOST FIRST-TIME GUESTS DON\u2019T RETURN',`Olo\u2019s loyalty lead says nearly 70% of guests never come back after a visit. That\u2019s a vendor\u2019s figure from an interview in the report, not a survey result, so say "industry data shows" rather than citing the survey.`,`"We re-engage our diners so they become regulars."`],
+ ['INDEPENDENTS','MOST INDEPENDENTS HAVE NO PROGRAM',`Only 37% of independents have a loyalty program, vs. 80% of chains. Across all operators, the top barriers are budget (24%), expertise (16%) and tech integration (14%).`,`"No app, no integration, nothing for your staff to run."`]];
+ S.sort((a,b)=>(b[0]===first)-(a[0]===first));
+ return `Industry research for ${x.biz||'this account'} (for you, not to send)
+
+Source: Nation's Restaurant News and Restaurant Business, "Loyalty & the Customer Experience" (October 2026). Survey of nearly 325 restaurant operators, August 2026.
+
+${S.map(([k,h,stat,say],i)=>`${h}\n${i===0?'Best fit for this account. ':''}${stat}\nSay: ${say}`).join('\n\n')}
+
+HOW TO USE IT
+Use one stat per call, the one that matches what they just told you. Say "a national survey of restaurant operators this fall" rather than reading out the source.`}
 // Talking points (rep-facing): the Dinova holiday urgency play from the team meeting
 function talkingPoints(x){const co=lst(x.corp.slice(0,3))||'big local employers',when=x.month?` in ${x.month}`:'',est=x.g?`we estimate ${UL(x)}`:'',nd2=x.nd.length?lst(x.nd.slice(0,2)):'';
  const off=offerLine()||'25% off their Dinova rate for November and December';
@@ -541,11 +560,11 @@ function sfErr(e){const c=e?.code;
  sfMsg('Could not reach Salesforce just now.',true,true)}
 var SNAP=null,SNAP_ROWS=[],asOfTxt='';
 function initSnap(d){SNAP=d;SNAP_ROWS=SNAP.rows.map(r=>({Id:r[0],AccountId:r[1],OwnerId:r[2],StageName:r[3],CreatedDate:r[4],CloseDate:r[5],LastActivityDate:r[6]||null,Held__c:!!r[7],Date_Held__c:r[8]||null,Times_Rescheduled__c:r[9],Loss_Reason__c:r[10]||null,Account:{Name:r[11],Seated_Market__c:r[12]||null,Neighborhood__c:r[13]||null,Primary_Cuisine__c:r[14]||null,Monthly_Revenue_Prediction__c:r[15]||null,Group_Locations__c:r[16]||0},OpportunityContactRoles:{records:[{Contact:{FirstName:r[17]||'',Title:r[18]||''}}]}}));
-asOfTxt=new Date(SNAP.asOf+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+asOfTxt=SNAP.live?'Live from Salesforce, refreshed every 4 hours':'Salesforce snapshot from '+new Date(SNAP.asOf+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 function sfReps(){const n={};SNAP_ROWS.forEach(o=>{n[o.OwnerId]=(n[o.OwnerId]||0)+(o.StageName!=='Closed Lost'?1:0)});
  const ids=Object.keys(SNAP.owners).sort((a,b)=>SNAP.owners[a].localeCompare(SNAP.owners[b]));const last=store.get('cb_sfRep','');
  $('#sfRep').innerHTML='<option value="">Pick yourself</option>'+ids.map(id=>`<option value="${esc(id)}">${esc(SNAP.owners[id])} (${n[id]||0} open)</option>`).join('');$('#sfRep').disabled=false;
- if(last&&SNAP.owners[last]){$('#sfRep').value=last;sfLoad()}else sfMsg(`Salesforce snapshot from ${asOfTxt}. Pick yourself to see your pipeline.`)}
+ if(last&&SNAP.owners[last]){$('#sfRep').value=last;sfLoad()}else sfMsg(`${asOfTxt}. Pick yourself to see your pipeline.`)}
 
 const LATE=['Verbal Commitment','Order Form Sent','Negotiation','Product Evaluation','Setting up Direct','In Development','Aggregator Publisher Review'];
 const ST_PTS={'Following Up':22,'On Hold - Interested':18,'Hold':8,'Demo Scheduled':18,'Meeting Scheduled':18,'Missed (Actively Rescheduling)':18,'Follow-up Missed':10,'Scheduling':8,'Expressed Interest':8,'Prospecting':6};
@@ -571,9 +590,9 @@ function shape(o){const a=o.Account||{},c=o.OpportunityContactRoles?.records?.[0
  return {id:o.Id,o,a,c,lost,biz:a.Name||o.Name,mkt:a.Seated_Market__c||'',gmv:a.Monthly_Revenue_Prediction__c||0,stage:o.StageName||'',loss:o.Loss_Reason__c||'',demo,heldOn:dt(o.Date_Held__c),age,last:dt(o.LastActivityDate),resch:o.Times_Rescheduled__c||0,notes:SNAP.summ[o.Id]?'y':''}}
 const shapeS=o=>{const r=shape(o);return Object.assign(r,score(r))};
 function sfLoad(){const id=$('#sfRep').value;store.set('cb_sfRep',id);SF_ROWS=[];SF_SEL='';$('#pNote').hidden=true;
- if(!SNAP.owners[id]){$('#pTable').hidden=true;$('#pSum').innerHTML='';sfMsg(`Salesforce snapshot from ${asOfTxt}. Pick yourself to see your pipeline.`);return}
+ if(!SNAP.owners[id]){$('#pTable').hidden=true;$('#pSum').innerHTML='';sfMsg(`${asOfTxt}. Pick yourself to see your pipeline.`);return}
  const seen=new Set();SF_ROWS=SNAP_ROWS.filter(o=>o.OwnerId===id).map(shapeS).sort((a,b)=>(a.lost-b.lost)||((dt(b.o.CloseDate)||0)-(dt(a.o.CloseDate)||0))).filter(r=>{const k=r.o.AccountId;if(!r.lost){if(k)seen.add(k);return true}if(k&&seen.has(k))return false;if(k)seen.add(k);return true});
- $('#seller').value=String(SNAP.owners[id]||'').split(' ')[0];save();sfMsg(`Salesforce snapshot from ${asOfTxt}. Click any row to load it into the builder.`);renderPipe()}
+ $('#seller').value=String(SNAP.owners[id]||'').split(' ')[0];save();sfMsg(`${asOfTxt}. Click any row to load it into the builder.`);renderPipe()}
 function grpOf(r){const g=pv.group;
  if(g==='priority')return {k:'P'+r.tier,label:TIER[r.tier],ord:r.tier};
  if(g==='status'){if(r.lost){return {k:'L'+r.loss,label:'Lost: '+(LOSS[r.loss]||r.loss||'no reason given'),ord:100}}const i=STAGE_ORDER.indexOf(r.stage);return {k:'S'+r.stage,label:r.stage,ord:i<0?50:i}}
@@ -624,17 +643,34 @@ $$('#pGroup button').forEach(b=>b.onclick=()=>{pv.group=b.dataset.v;store.set('c
 
 // Pipeline snapshot: pipeline.enc (encrypted) + key from the Cold Call Hub sheet's Resources tab, so the data is only readable when signed in
 var PIPE_LOADING=false;
+async function encSnap(){const res=await vals('Resources!A2:B');const kv=(res.find(r=>String(r[0]||'').trim()==='collateral_pipeline_key')||[])[1];if(!kv)throw new Error('nokey');
+ const key=await crypto.subtle.importKey('raw',Uint8Array.from(atob(String(kv).trim()),c=>c.charCodeAt(0)),'AES-GCM',false,['decrypt']);
+ const r=await fetch('pipeline.enc',{cache:'no-cache'});if(!r.ok)throw new Error('nofile');const buf=new Uint8Array(await r.arrayBuffer());
+ const plainBuf=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},key,buf.slice(12));
+ return JSON.parse(await new Response(new Blob([plainBuf]).stream().pipeThrough(new DecompressionStream('gzip'))).text())}
+const isoD=v=>{v=String(v??'').trim();if(!v)return '';let m=v.match(/^(\d{4}-\d{2}-\d{2})/);if(m)return m[1];m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m)return `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`;const d=new Date(v);return isNaN(d)?'':d.toISOString().slice(0,10)};
+// Live pipeline from the "Pipeline" tab (Data connector for Salesforce, auto-refresh), read with the rep's Google sign-in
+async function tabSnap(){const v=await vals('Pipeline!A:Z');if(!v||v.length<2)throw new Error('notab');
+ const H={};v[0].forEach((h,i)=>{const k=String(h||'').trim().toLowerCase().replace(/^opportunity\./,'');if(k&&H[k]==null)H[k]=i});
+ const col=(...ns)=>{for(const n of ns){const i=H[n.toLowerCase()];if(i!=null)return i}return -1};
+ const C={id:col('Id'),acct:col('AccountId'),own:col('OwnerId'),oname:col('Owner.Name'),oemail:col('Owner.Email'),stage:col('StageName'),cr:col('CreatedDate'),cl:col('CloseDate'),la:col('LastActivityDate'),held:col('Held__c'),dh:col('Date_Held__c'),tr:col('Times_Rescheduled__c'),loss:col('Loss_Reason__c'),an:col('Account.Name'),mk:col('Account.Seated_Market__c'),hd:col('Account.Neighborhood__c'),cu:col('Account.Primary_Cuisine__c'),rev:col('Account.Monthly_Revenue_Prediction__c'),gl:col('Account.Group_Locations__c')};
+ if(C.id<0||C.own<0||C.stage<0)throw new Error('badtab');
+ const g=(r,i)=>i<0?'':String(r[i]??'').trim();const owners={},emails={},rows=[];
+ for(const r of v.slice(1)){const id=g(r,C.id);if(!/^006/.test(id))continue;const loss=g(r,C.loss);if(loss==='Duplicate Opp')continue;
+  const st=g(r,C.stage);if(st==='Closed Lost'&&isoD(g(r,C.cl))<'2026-08-01')continue;if(/^Closed Won$/i.test(st))continue;
+  const own=g(r,C.own);if(!own)continue;if(C.oname>=0&&g(r,C.oname))owners[own]=g(r,C.oname);if(C.oemail>=0&&g(r,C.oemail))emails[own]=g(r,C.oemail).toLowerCase();
+  rows.push([id,g(r,C.acct),own,st,isoD(g(r,C.cr)),isoD(g(r,C.cl)),isoD(g(r,C.la)),/^(true|1|yes)$/i.test(g(r,C.held))?1:0,isoD(g(r,C.dh)),Math.round(num(g(r,C.tr))),loss,g(r,C.an),g(r,C.mk),g(r,C.hd),g(r,C.cu),num(g(r,C.rev)),num(g(r,C.gl)),'',''])}
+ if(!rows.length)throw new Error('notab');Object.keys(owners).forEach(k=>owners[k]=owners[k]||k);rows.forEach(r=>{if(!owners[r[2]])owners[r[2]]='Unknown rep'});
+ return {live:true,asOf:new Date().toISOString().slice(0,10),owners,emails,rows,summ:{}}}
 async function loadPipeline(){if(SNAP||PIPE_LOADING)return;PIPE_LOADING=true;sfMsg('Loading your pipeline…');
- try{const res=await vals('Resources!A2:B');const kv=(res.find(r=>String(r[0]||'').trim()==='collateral_pipeline_key')||[])[1];if(!kv)throw new Error('nokey');
-  const key=await crypto.subtle.importKey('raw',Uint8Array.from(atob(String(kv).trim()),c=>c.charCodeAt(0)),'AES-GCM',false,['decrypt']);
-  const r=await fetch('pipeline.enc',{cache:'no-cache'});if(!r.ok)throw new Error('nofile');const buf=new Uint8Array(await r.arrayBuffer());
-  const plainBuf=await crypto.subtle.decrypt({name:'AES-GCM',iv:buf.slice(0,12)},key,buf.slice(12));
-  const txt=await new Response(new Blob([plainBuf]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
-  initSnap(JSON.parse(txt));
+ try{let d=null,enc=null;try{d=await tabSnap()}catch(e){d=null}
+  try{enc=await encSnap()}catch(e){if(!d)throw e}
+  if(d){if(enc){d.summ=enc.summ||{};const ct={};(enc.rows||[]).forEach(r=>{if(r[17]||r[18])ct[r[0]]=[r[17],r[18]]});d.rows.forEach(r=>{const c=ct[r[0]];if(c){r[17]=c[0]||'';r[18]=c[1]||''}});Object.entries(enc.emails||{}).forEach(([k,e])=>{if(!d.emails[k])d.emails[k]=e})}}else d=enc;
+  initSnap(d);
   if(!store.get('cb_sfRep','')){let em=ME.email;if(!em){try{em=(JSON.parse(localStorage.getItem('seated_cch_auth')||'null')?.profile?.email)||''}catch(e){}}
    em=String(em||'').toLowerCase();const hit=Object.entries(SNAP.emails||{}).find(([id,e])=>e===em);if(hit)store.set('cb_sfRep',hit[0])}
   sfReps()}
- catch(e){sfMsg(e.message==='nofile'?'The pipeline file is missing from the site. Ask James to upload pipeline.enc.':e.message==='nokey'?'The pipeline key is missing from the Cold Call Hub sheet. Ask James.':'Couldn\u2019t open the pipeline. If James just refreshed it, reload the page.',true)}
+ catch(e){sfMsg(e.message==='nofile'?'Couldn’t find the pipeline. Ask James.':e.message==='nokey'?'The pipeline key is missing from the Cold Call Hub sheet. Ask James.':'Couldn’t open the pipeline. Reload the page to try again.',true)}
  finally{PIPE_LOADING=false}}
 
 // Play Made! (logs to the "Play Made Log" Google Sheet with each rep's own Google sign-in; nothing public)
