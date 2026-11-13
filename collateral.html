@@ -172,8 +172,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
     <div><span class="hint">Channels to mention</span><div class="checks" id="chans"></div></div>
   </fieldset>
   <fieldset><legend>The offer</legend>
-    <div class="two"><label for="pct">Offer (optional)<select id="pct"><option value="">No offer</option><option value="25">25% off Dinova spend</option><option value="50">50% off Dinova spend</option></select></label><label for="term">Terms and deadline<input id="term" value="through the holidays" placeholder="e.g. through the holidays, if signed by Nov 20"></label></div>
-    <span class="hint">Off their Dinova spend. Leave it on No offer and the copy is all value.</span>
+    <div class="two"><label for="pct">Offer (optional)<select id="pct"><option value="">No offer</option><option value="25">25% off for the holidays</option><option value="50">50% off for the holidays</option></select></label><label for="term">Terms and deadline<input id="term" value="for the holidays" placeholder="e.g. for the holidays, if signed by Nov 20"></label></div>
+    <span class="hint">Off their rate on every channel, not just Dinova. Leave it on No offer and the copy is all value.</span>
   </fieldset>
   <fieldset><legend>Notes</legend>
     <input type="hidden" id="seller"><input type="hidden" id="title"><input type="hidden" id="email">
@@ -227,10 +227,10 @@ const PORD=['corporate','discount','select','bank','revolut'];
 const CAP={dinova:'Dinova app: corporate cardholders find participating restaurants near the office.',bofa:'Bank of America deals, Food offers: local restaurants with cash back and distance.',revolut:'Revolut Shops, Food & Drink: Seated restaurants with photos, map pins and the reward.'};
 const FIELDS=['biz','contact','role','mkt','hood','cuis','gmv','locs','aov','ndNote','stage','month','play','pct','term','seller','title','email','extra'];
 let ND=[];var ND_NOTES={},ND_WHY={},CUR_GEO=null;let HUB_DIN=null;var HUB_ACCT=null;var PK_SET=new Set();const SHEET={id:'1y9Bl1FyVl7pLYcG4SfZWd2705iP6M0rO_efAzvp1uGs',client:'352874229289-tglifiln7raionffiran3a63p6verre0.apps.googleusercontent.com',scope:'https://www.googleapis.com/auth/spreadsheets.readonly',ok:false,token:null,tc:null,scripts:{},bilt:{}};
-const offerLine=()=>{const p=$('#pct').value,t=$('#term').value.trim()||'through the holidays';return p?`${p}% off your Dinova spend ${t}`:''};
+const offerLine=()=>{const p=$('#pct').value,t=$('#term').value.trim()||'for the holidays';return p?`${p}% off ${t}`:''};
 const ofS=(a,b='')=>offerLine()?a+offerLine()+b:'';
 const offerBox=()=>offerLine()||'Last December, Dinova spend at our restaurants ran 34% above October.';
-function syncDiscount(){const p=$('#pct').value||'25';PLAYS.discount.name=`${p}% off Dinova spend`;PLAYS.discount.hook=`${offerLine()}.`;PLAYS.discount.pitch=`We'll take ${p}% off your Dinova spend ${$('#term').value.trim()||'through the holidays'}. You only pay on meals we send.`;PLAYS.discount.ask=`Sign and lock ${offerLine()}.`}
+function syncDiscount(){const p=$('#pct').value||'25';PLAYS.discount.name=`${p}% off for the holidays`;PLAYS.discount.hook=`${offerLine()}.`;PLAYS.discount.pitch=`We'll take ${p}% off ${$('#term').value.trim()||'for the holidays'}, on every channel. You only pay on meals we send.`;PLAYS.discount.ask=`Sign and lock ${offerLine()}.`}
 function fillPlays(){syncDiscount();const v=$('#play').value||'corporate';const ord=PORD.filter(p=>p!=='discount'||$('#pct').value);$('#play').innerHTML=ord.map(p=>`<option value="${p}">${esc(PLAYS[p].name)}</option>`).join('');$('#play').value=ord.includes(v)?v:'corporate'}
 // suggestions
 function renderND(){$('#ndChips').innerHTML=ND.map((n,i)=>`<div class="ndrow"><span class="chip">${esc(n)}<button type="button" aria-label="Remove ${esc(n)}" data-rm="${i}">×</button></span><input data-ndn="${i}" value="${esc(ND_NOTES[n]||'')}" placeholder="Note for this one, e.g. two blocks away" aria-label="Note for ${esc(n)}"></div>`).join('')||'<span class="hint">None yet. Two or three is ideal.</span>';
@@ -257,7 +257,7 @@ $('#mkt').onchange=()=>{renderMkt();renderSugg();const rv=$('#ch_revolut');if(!r
 $('#hood').oninput=()=>{renderSugg();save()};$('#cuis').onchange=()=>{renderSugg();save()};$('#ch_revolut').onchange=e=>{e.target.dataset.touched=1;save()};
 // persistence
 function save(){const o={offerV2:1};FIELDS.forEach(k=>o[k]=$('#'+k).value);o.nd=ND;o.ndn=ND_NOTES;o.ch=CHANS.map(([k])=>$('#ch_'+k).checked);store.set('cb_form',JSON.stringify(o));$('#saved').textContent='Saved in this browser'}
-function load(){let raw=store.get('cb_form',null);if(!raw){raw=JSON.stringify({biz:'',contact:'',role:'',mkt:'',hood:'',cuis:'',gmv:'',locs:'1',aov:'',ndNote:'',stage:'cold',month:'',play:'corporate',seller:'',title:'',email:'',extra:'',nd:[],ch:[true,true,false,true]})}try{const o=JSON.parse(raw);if(/nov 6/i.test(o.dl||''))o.dl='';if(o.dl){o.term=(o.term||'through the holidays')+', '+o.dl;o.dl=''}if(!o.offerV2){o.pct='';o.term='through the holidays';if(o.play==='discount')o.play='corporate'}if(o.mkt==null||o.mkt===''){const c=(o.city||'').split(',')[0].trim();if(MK[c])o.mkt=c}if(o.play==='corporate'||!o.play)o.play='corporate';FIELDS.forEach(k=>{if(o[k]!=null&&$('#'+k))$('#'+k).value=o[k]});ND=o.nd||[];ND_NOTES=o.ndn||{};if(o.ndNote&&ND[0]&&!ND_NOTES[ND[0]])ND_NOTES[ND[0]]=o.ndNote;if(o.ch)CHANS.forEach(([k],i)=>$('#ch_'+k).checked=!!o.ch[i])}catch(e){}}
+function load(){let raw=store.get('cb_form',null);if(!raw){raw=JSON.stringify({biz:'',contact:'',role:'',mkt:'',hood:'',cuis:'',gmv:'',locs:'1',aov:'',ndNote:'',stage:'cold',month:'',play:'corporate',seller:'',title:'',email:'',extra:'',nd:[],ch:[true,true,false,true]})}try{const o=JSON.parse(raw);if(/nov 6/i.test(o.dl||''))o.dl='';if(o.dl){o.term=(o.term||'for the holidays')+', '+o.dl;o.dl=''}if(!o.offerV2){o.pct='';o.term='for the holidays';if(o.play==='discount')o.play='corporate'}if(o.mkt==null||o.mkt===''){const c=(o.city||'').split(',')[0].trim();if(MK[c])o.mkt=c}if(o.play==='corporate'||!o.play)o.play='corporate';FIELDS.forEach(k=>{if(o[k]!=null&&$('#'+k))$('#'+k).value=o[k]});ND=o.nd||[];ND_NOTES=o.ndn||{};if(o.ndNote&&ND[0]&&!ND_NOTES[ND[0]])ND_NOTES[ND[0]]=o.ndNote;if(o.ch)CHANS.forEach(([k],i)=>$('#ch_'+k).checked=!!o.ch[i])}catch(e){}}
 fillPlays();load();if($('#stage').selectedIndex<0)$('#stage').value='dark';fillPlays();renderMkt();renderND();renderSugg();
 $('#f').addEventListener('input',e=>{if(['pct','term'].includes(e.target.id))fillPlays();if(e.target.id==='ndNote')renderND();save()});
 $('#f').addEventListener('change',e=>{if(e.target.id==='pct')fillPlays();save()});
@@ -378,7 +378,7 @@ function onepager(x){const W=816,H=1056,M=56;let y=0;let s=`<svg xmlns="http://w
   cl.forEach((l,i)=>{const X=M+i*(cw+gap);s+=`<rect x="${X}" y="${y}" width="${cw}" height="${ch}" rx="10" fill="${VC.sand}"/>`+lines(titles[i],X+16,y+28,maxc-4,16,VC.ink,21,{w:700})+lines(bodies[i]||l,X+16,y+28+nLines(titles[i],maxc-4)*21+4,maxc,13.5,'#4A443C',19)});y+=ch+30}
  if(x.nd.length){s+=kick(x.mkt?`Already live with Seated in ${x.mkt}`:'Already live with Seated',M,y);y+=12;const c=chips(x.nd.map(n=>(x.ndNotes||{})[n]?`${n} · ${x.ndNotes[n]}`:n),M,y,W-2*M);s+=c.svg;y+=c.h+26}
  s+=kick('How it works',M,y);y+=10;
- const rows=[...(offerLine()?[[`${$('#pct').value}% off Dinova`,'Off your Dinova spend '+offerLine().replace(/^\d+% off your Dinova spend /,'')+'.']]:[['Holiday parties','Booking now through Dinova. Get live before December fills up.']]),['No contract, no setup fee','Card-linked. Nothing changes at the host stand.'],['Pay on results','You only pay on meals we send.']];
+ const rows=[...(offerLine()?[[`${$('#pct').value}% off`,'Off your rate '+offerLine().replace(/^\d+% off /,'')+', on every channel.']]:[['Holiday parties','Booking now through Dinova. Get live before December fills up.']]),['No contract, no setup fee','Card-linked. Nothing changes at the host stand.'],['Pay on results','You only pay on meals we send.']];
  rows.forEach(([a,b])=>{s+=`<line x1="${M}" x2="${W-M}" y1="${y}" y2="${y}" stroke="${VC.line}"/>`;s+=`<text x="${M}" y="${y+26}" fill="${VC.ink}" font-size="15" font-weight="700" font-family='${SANS}'>${esc(a)}</text>`+lines(b,M+200,y+26,62,15,VC.ink,20);y+=16+nLines(b,62)*20+8});
  s+=`<line x1="${M}" x2="${W-M}" y1="${H-74}" y2="${H-74}" stroke="${VC.line}"/><text x="${M}" y="${H-48}" fill="${VC.ink}" font-size="13" font-family='${SANS}'><tspan font-weight="700">${esc(x.seller)}</tspan>${x.title?`<tspan fill="${VC.sub}">, ${esc(x.title)}</tspan>`:''}${x.email?`<tspan fill="${VC.sub}"> · ${esc(x.email)}</tspan>`:''}</text><text x="${W-M}" y="${H-48}" text-anchor="end" fill="${VC.sub}" font-size="13" font-family='${SANS}'>seatedapp.io</text></svg>`;
  return {svg:s,over:y>H-84}}
@@ -590,7 +590,7 @@ function voicemail(x){const r=(typeof SF_SEL!=='undefined'&&SF_SEL)?SF_ROWS.find
 setTimeout(renderPush,0);
 // Talking points (rep-facing): the Dinova holiday urgency play from the team meeting
 function talkingPoints(x){const co=lst(x.corp.slice(0,3))||'big local employers',when=x.month?` in ${x.month}`:'',est=x.g?`we estimate ${UL(x)}`:'',nd2=x.nd.length?lst(x.nd.slice(0,2).map(n=>ndl(x,n))):'';
- const off=offerLine()||'25% off their Dinova rate for November and December';
+ const off=offerLine()||'25% off for the holidays';
  const proof=[est&&`For ${x.biz}, ${est}.`,nd2&&`We already send diners to ${nd2}.`].filter(Boolean).join(' ');
  const open={
   cold:`They don't know us yet. Lead with the problem you solve: getting corporate diners in the door during the one season companies are actively booking.`,
