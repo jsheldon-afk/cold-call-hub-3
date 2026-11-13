@@ -48,6 +48,7 @@ textarea{min-height:56px;resize:vertical}
 #sfMsg.warn{color:var(--warn-ink);background:var(--warn);padding:2px 8px;border-radius:6px}
 .sheetbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12.5px;color:var(--muted)}.sheetbar.warn #sheetMsg{color:var(--warn-ink);background:var(--warn);padding:2px 8px;border-radius:6px}
 .callfirst{background:#c2410c;color:#fff;border-radius:10px;padding:12px 16px;margin:4px 0 14px;font-size:15px;line-height:1.45}.callfirst b{font-size:18px;letter-spacing:.02em;margin-right:6px}
+.push{background:var(--panel);border:2px solid #c2410c;border-radius:10px;padding:12px 16px;margin:0 0 14px;font-size:14px;line-height:1.55;color:var(--ink)}.push:empty{display:none}.push .big{font:700 20px var(--display);color:#c2410c}.push .stg{display:inline-block;font-weight:600;font-size:12.5px;border:1px solid var(--line);border-radius:99px;padding:1px 9px;margin:2px 4px 2px 0;background:var(--bg)}.push .prog{font-weight:700}
 .hubbar{background:var(--accent-soft);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px}.hubbar b{color:var(--accent)}
 .pipe{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
 .pipe h2{font-family:var(--display);margin:0;font-size:19px}
@@ -120,6 +121,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
 </style>
 <div class="wrap">
 <div class="callfirst" role="note"><b>You CALL first.</b> Everything here backs up a conversation. Pick up the phone, then send it while you're on the call or right after.</div>
+<div class="push" id="pushBar"></div>
 <header>
   <h1>Seated Collateral Builder</h1>
   <p class="sub">Collateral for any account. Open it from the Cold Call Hub and it fills in the restaurant. Signed in with your Seated Google account, it reads the Cold Call Hub sheet for market stats, name-droppers, Dinova companies and the current call script. Holiday season is on: Dinova is the default lead. Your inputs stay in this browser.</p>
@@ -429,7 +431,7 @@ function card(x){const W=1200,H=628,M=60;const k=x.P.img||'dinova';const land=IM
  {const ol=Math.floor(tw/12.5),n=nLines(offerBox(),ol);s+=`<rect x="${M}" y="${y}" width="${tw}" height="76" rx="12" fill="${VC.dark}"/>`+lines(offerBox(),M+22,y+(n>1?32:46),ol,22,VC.fill,26,{w:700})}
  s+=s2.svg+`<text x="${M}" y="${H-46}" fill="${VC.sub}" font-size="16" font-family='${SANS}'>No upfront cost · Nothing changes at the host stand · Pay only on meals we send</text><image href="${IMG.logo_dark.src}" x="${W-M-120}" y="${H-66}" width="120" height="24"/></svg>`;return {svg:s,over:y+76>H-60}}
 // builder
-const KINDS=[['tp','Talking points','for you, not to send'],['research','Industry research','stats for calls'],['exec','CRO note from Gradie','exec email, all value'],['email','Email','right for their history'],['seq','3-email sequence','today / +3 / +6 days'],['sms','Texts','2 short texts'],['call','Call script','rebook or follow-up'],['li','LinkedIn / IG DM','to owner or GM'],['onepager','One-pager','visual, letter size'],['card','Offer card','visual, 1200×628'],['rpage','Research one-pager','industry stats, letter size'],['rcard','Research card','industry stats, 1200×628']];
+const KINDS=[['tp','Talking points','for you, not to send'],['vm','Voicemail','follow-up or missed meeting'],['research','Industry research','stats for calls'],['exec','CRO note from Gradie','exec email, all value'],['email','Email','right for their history'],['seq','3-email sequence','today / +3 / +6 days'],['sms','Texts','2 short texts'],['call','Call script','rebook or follow-up'],['li','LinkedIn / IG DM','to owner or GM'],['onepager','One-pager','visual, letter size'],['card','Offer card','visual, 1200×628'],['rpage','Research one-pager','industry stats, letter size'],['rcard','Research card','industry stats, 1200×628']];
 let kind=store.get('cb_kind','exec');if(!KINDS.some(k=>k[0]===kind))kind='exec';
 $('#kinds').innerHTML=KINDS.map(([k,l,s])=>`<button class="kind" data-k="${k}" aria-pressed="${k===kind}">${esc(l)}<small>${esc(s)}</small></button>`).join('');
 $('#kinds').querySelectorAll('.kind').forEach(b=>b.onclick=()=>{kind=b.dataset.k;store.set('cb_kind',kind);$('#kinds').querySelectorAll('.kind').forEach(x=>x.setAttribute('aria-pressed',x===b));go()});
@@ -439,6 +441,7 @@ function warn(x){const w=[];if(!$('#biz').value.trim())w.push('Add the business 
 async function go(){fillPlays();const x=ctx();warn(x);const lab=KINDS.find(k=>k[0]===kind)[1];$('#oTitle').textContent=`${lab} · ${x.biz}`;$('#oVis').innerHTML='';$('#oText').textContent='';lastSvg=null;['#oSvg','#oPng','#oCopy'].forEach(s=>$(s).hidden=true);
  if(kind==='onepager'||kind==='card'||kind==='rpage'||kind==='rcard'){const r=({card,onepager,rpage:researchPage,rcard:researchCard})[kind](x);lastSvg=r.svg;$('#oVis').innerHTML=r.svg;if(r.over)$('#oText').textContent='This is running long. Trim the name-droppers or channels so it fits.';$('#oSvg').hidden=false;$('#oPng').hidden=false;return}
  if(kind==='research'){lastText=industryResearch(x);showText(lastText);$('#oCopy').hidden=false;return}
+ if(kind==='vm'){lastText=voicemail(x);showText(lastText);$('#oCopy').hidden=false;return}
  if(kind==='tp'){lastText=talkingPoints(x);showText(lastText);$('#oCopy').hidden=false;return}
  if(kind==='hub'){lastText=hub(x);showText(lastText);$('#oCopy').hidden=false;return}
  if(!SAMPLE){lastText=tmpl(kind,x);showText(lastText);$('#oCopy').hidden=false;return}
@@ -460,7 +463,7 @@ function showText(t){const el=$('#oText');t=String(t||'');
  for(const b of blocks){const lines=b.split('\n');
   for(let i=0;i<lines.length;i++){const raw=lines[i],L=raw.trim();if(!L)continue;const e=esc(L);
    if(/^[-—–]{1,3}$/.test(L)){out+='<hr>';continue}
-   if(first&&/^(Talking points|Industry research|Call script|Script)\b/i.test(L)){out+=`<div class="tx-title">${e}</div>`;first=false;continue}
+   if(first&&/^(Talking points|Industry research|Voicemail|Call script|Script)\b/i.test(L)){out+=`<div class="tx-title">${e}</div>`;first=false;continue}
    first=false;
    if(/^["“]?[A-Z0-9][A-Z0-9 '’"“”?&\/()\-]{2,48}$/.test(L)&&/[A-Z]{3}/.test(L)&&!/[a-z]/.test(L)){out+=`<div class="tx-h">${e}</div>`;continue}
    if(/^(Email|Text) \d+( \([^)]*\))?:?$/.test(L)||(/^[A-Z][^.:!?]{1,40}:$/.test(L))){out+=`<div class="tx-h">${esc(L.replace(/:$/,''))}</div>`;continue}
@@ -537,6 +540,22 @@ ${S.map(([k,h,stat,say],i)=>`${h}\n${i===0?'Best fit for this account. ':''}${st
 
 HOW TO USE IT
 Use one stat per call, the one that matches what they just told you. Say "a national survey of restaurant operators this fall" rather than reading out the source.`}
+
+// Push to the Dinova deadline: banner, today's targets progress, voicemail scripts
+const PUSH_END='2026-11-21',TARGET_ST=['Order Form Sent','Follow-up Missed','Following Up','On Hold - Interested','Hold','Missed (Actively Rescheduling)'];
+const isTarget=r=>!r.lost&&(r.stale||TARGET_ST.includes(r.stage));
+function todayPlayedAccts(){try{const L=typeof plays==='function'?plays():typeof allPlays==='function'?allPlays():[];const d=new Date().toDateString();return new Set(L.filter(p=>new Date(p.t).toDateString()===d).map(p=>p.acct))}catch(e){return new Set()}}
+function renderPush(){const el=$('#pushBar');if(!el)return;const t0=new Date();t0.setHours(0,0,0,0);const end=new Date(PUSH_END+'T00:00:00');const left=Math.round((end-t0)/864e5)+1;
+ if(left<1){el.innerHTML='';return}
+ let prog='';try{if(typeof SF_ROWS!=='undefined'&&SF_ROWS.length){const T=SF_ROWS.filter(isTarget),done=todayPlayedAccts(),n=T.filter(r=>done.has(r.o.AccountId)).length;prog=`<div class="prog">Your targets today: ${n} of ${T.length} accounts played.</div>`}}catch(e){}
+ el.innerHTML=`<span class="big">${left} day${left===1?'':'s'} left, including today.</span> Full force: proactive, not reactive.<div>Before prospecting, every account in these stages gets a first touch: <span class="stg">Order Form Sent</span><span class="stg">Follow-up missed</span><span class="stg">Following up</span><span class="stg">On hold</span><span class="stg">Missed meetings: everyone gets a call and a voicemail</span></div><div><b>Cadence:</b> Call + voicemail + asset email = <b>Play Made</b>.</div>${prog}`}
+function voicemail(x){const r=(typeof SF_SEL!=='undefined'&&SF_SEL)?SF_ROWS.find(z=>z.id===SF_SEL):null;
+ const missed=r?(r.stale||r.stage==='Missed (Actively Rescheduling)'):x.stage==='noshow';
+ const who=x.contact&&!/team$/i.test(x.contact)?(x.contact===x.contact.toUpperCase()?x.contact.toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):x.contact):'[Contact name]',me=x.seller&&x.seller!=='[Your name]'?x.seller:'[Your name]';
+ const body=missed?`We actually had a meeting scheduled to discuss sending more diners into the restaurant this holiday season. Unfortunately, we missed the last Dinova deadline. It's important that we reconnect today so we don't miss the opportunity again heading into the December holiday season.\n\nPlease give me a call as soon as you get this. You can reach me directly at [your number].`
+  :`I wanted to reach out and first apologize that we missed the last Dinova deadline. It's important that we reconnect today so we don't miss the opportunity again heading into the December holiday season.\n\nI'm going to send you an email now with the details, but please give me a call as soon as you get this. You can reach me directly at [your number].`;
+ return `Voicemail: ${missed?'missed meeting':'follow-up'} (${x.biz})\n\nHi ${who}, this is ${me} from Seated. Hope all is well!\n\n${body}\n\nLooking forward to connecting!\n\nCADENCE\nCall + voicemail + asset email = Play Made. ${missed?'Send the email right after the voicemail, then log it with Play Made!':'Send the email you mentioned right after you hang up, then log it with Play Made!'}`}
+setTimeout(renderPush,0);
 // Talking points (rep-facing): the Dinova holiday urgency play from the team meeting
 function talkingPoints(x){const co=lst(x.corp.slice(0,3))||'big local employers',when=x.month?` in ${x.month}`:'',est=x.g?`we estimate ${UL(x)}`:'',nd2=x.nd.length?lst(x.nd.slice(0,2)):'';
  const off=offerLine()||'25% off their Dinova rate for November and December';
@@ -649,9 +668,9 @@ function sfLoad(){const id=$('#sfRep').value;store.set('cb_sfRep',id);SF_ROWS=[]
  $('#seller').value=String(SNAP.owners[id]||'').split(' ')[0];save();sfMsg(`${asOfTxt}. Click any row to load it into the builder.`);renderPipe()}
 function grpOf(r){const g=pv.group;
  if(g==='playbook'){if(r.lost)return {k:'L'+r.loss,label:'Lost: '+(LOSS[r.loss]||r.loss||'no reason given'),ord:100};
-  if(r.stale||r.stage==='Missed (Actively Rescheduling)')return {k:'PB5',label:'Missed meetings',ord:5,act:'Everyone gets a call and a voicemail.',stale:1};
+  if(r.stale||r.stage==='Missed (Actively Rescheduling)')return {k:'PB5',label:'Missed meetings',ord:5,act:'Everyone gets a call and a voicemail.',stale:1,target:1};
   const m={'Order Form Sent':[1,'Order Form Sent'],'Follow-up Missed':[2,'Follow-up missed'],'Following Up':[3,'Following up'],'On Hold - Interested':[4,'On hold'],'Hold':[4,'On hold']}[r.stage];
-  return m?{k:'PB'+m[0],label:m[1],ord:m[0]}:{k:'PB6',label:'Everything else',ord:6}}
+  return m?{k:'PB'+m[0],label:m[1],ord:m[0],target:1}:{k:'PB6',label:'Everything else (after the targets)',ord:6}}
  if(r.stale)return {k:'STALE',label:'Needs action: demo date passed, not marked held',ord:-1,stale:1};
  if(g==='priority')return {k:'P'+r.tier,label:TIER[r.tier],ord:r.tier};
  if(g==='status'){if(r.lost){return {k:'L'+r.loss,label:'Lost: '+(LOSS[r.loss]||r.loss||'no reason given'),ord:100}}const i=STAGE_ORDER.indexOf(r.stage);return {k:'S'+r.stage,label:r.stage,ord:i<0?50:i}}
@@ -659,7 +678,7 @@ function grpOf(r){const g=pv.group;
  const b=[[7,'0–7 days'],[30,'8–30 days'],[60,'31–60 days'],[90,'61–90 days'],[1e9,'90+ days']];const i=b.findIndex(([n])=>r.age<=n);
  return r.lost?{k:'A'+i+'L',label:'Lost '+b[i][1]+' ago',ord:20+i}:{k:'A'+i,label:'Open '+b[i][1],ord:i}}
 function demoTag(r){if(r.stale)return `<span class="tag missed">Passed ${esc(fmtD(r.demoAt))}, not held</span>`;return r.demo==='held'?`<span class="tag held">Held${r.heldOn?' '+esc(fmtD(r.heldOn)):''}</span>`:r.demo==='missed'?`<span class="tag missed">Missed${r.resch?' · '+r.resch+'× resched':''}</span>`:r.demo==='sched'?`<span class="tag">Booked${r.demoAt?' '+esc(fmtD(r.demoAt)):''}</span>`:'<span class="tag lost">None</span>'}
-function renderPipe(){PK_SET=new Set(plays().map(p=>p.acct));$$('#pShow button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===pv.show));$$('#pGroup button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===pv.group));
+function renderPipe(){setTimeout(renderPush,0);PK_SET=new Set(plays().map(p=>p.acct));$$('#pShow button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===pv.show));$$('#pGroup button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===pv.group));
  if(!SF_ROWS.length&&!$('#sfRep').value)return;
  const f=$('#pFind').value.trim().toLowerCase();
  const rows=SF_ROWS.filter(r=>(pv.show==='all'||(pv.show==='lost')===r.lost)&&(!f||(r.biz+' '+r.mkt).toLowerCase().includes(f)));
@@ -674,7 +693,7 @@ function renderPipe(){PK_SET=new Set(plays().map(p=>p.acct));$$('#pShow button')
  const th=(k,l,c='')=>`<th data-s="${k}" class="${c}">${l}${pv.sort===k?(pv.dir<0?' ↓':' ↑'):''}</th>`;
  let h=`<table><thead><tr>${th('biz','Restaurant')}${th('score','Priority','num')}${th('stage','Stage')}${th('demo','Demo')}${th('age','Age','num')}${th('last','Last call')}${th('gmv','Pred. GMV / mo','num')}</tr></thead><tbody>`;
  for(const g of gs){g.rows.sort((a,b)=>{const x=key(a),y=key(b);return (x<y?-1:x>y?1:0)*pv.dir});
-  h+=`<tr class="grp${g.stale?' stale':''}"><td colspan="7">${esc(g.label)}<small>${g.rows.length} · ${money(sum(g.rows))||'$0'}/mo</small>${g.act?`<span class="why" style="font-weight:700;color:inherit">${esc(g.act)}</span>`:''}</td></tr>`;
+  h+=`<tr class="grp${g.stale?' stale':''}"><td colspan="7">${esc(g.label)}${g.target?' <span class="tag p2">Today\u2019s target</span>':''}<small>${g.rows.length} · ${money(sum(g.rows))||'$0'}/mo</small>${g.act?`<span class="why" style="font-weight:700;color:inherit">${esc(g.act)}</span>`:''}</td></tr>`;
   h+=g.rows.map(rowH).join('')}
  if(sched.length){h+=`<tr class="grp sched" id="schedTog" tabindex="0" role="button" aria-expanded="${pv.sched?'true':'false'}"><td colspan="7">${pv.sched?'\u25be':'\u25b8'} Demo scheduled: upcoming<small>${sched.length} \u00b7 ${money(sum(sched))||'$0'}/mo \u00b7 ${pv.sched?'click to hide':'click to show'}</small></td></tr>`;if(pv.sched)h+=sched.map(rowH).join('')}
  $('#pTable').innerHTML=h+'</tbody></table>';$('#pTable').hidden=false;
@@ -738,7 +757,7 @@ async function loadPipeline(){if(SNAP||PIPE_LOADING)return;PIPE_LOADING=true;sfM
 
 // Play Made! (logs to the "Play Made Log" Google Sheet with each rep's own Google sign-in; nothing public)
 const LOG_ID='1PJZDvwb7NFARHtKEp1tDs6g-lIE8y2Yh9uiP-tR1dJk',RW_SCOPE='https://www.googleapis.com/auth/spreadsheets openid email profile';
-const PK=[['exec','CRO note'],['email','Email'],['seq','Email sequence'],['sms','Texts'],['call','Call'],['li','LinkedIn / IG DM'],['onepager','One-pager'],['card','Offer card'],['other','Other']],PKL=Object.fromEntries(PK);
+const PK=[['exec','CRO note'],['email','Email'],['seq','Email sequence'],['sms','Texts'],['call','Call'],['vm','Voicemail'],['li','LinkedIn / IG DM'],['onepager','One-pager'],['card','Offer card'],['other','Other']],PKL=Object.fromEntries(PK);
 var RW=null,RW_TC=null,ME={email:'',name:''},PLAYROWS=[],PLAY_BUSY=false,PLAY_TIMER=null,dRange=store.get('cb_dRange','week');
 try{const a=JSON.parse(localStorage.getItem('seated_ccb_rw')||'null');if(a&&a.accessToken&&a.expiresAt>Date.now()){RW=a.accessToken;ME={email:a.email||'',name:a.name||''}}}catch(e){}
 const readTok=()=>RW||SHEET.token;
@@ -764,7 +783,7 @@ async function appendRow(row){const go=()=>fetch('https://sheets.googleapis.com/
  if(r.status===403)throw Object.assign(new Error('forbidden'),{code:403});if(!r.ok)throw new Error('append '+r.status)}
 function openPlay(){const box=$('#playBox');if(!box.hidden){box.hidden=true;return}const a=curAcct();if(!a){toast('Add the business name first.');return}
  const prior=plays().filter(p=>p.acct===a.key);
- box.innerHTML=`<div><b>What did you send to ${esc(a.biz)}?</b>${prior.length?` <span class="hint">· ${prior.length} play${prior.length>1?'s':''} already logged on this account</span>`:''}</div><div class="checks">${PK.map(([k,l])=>`<label><input type="checkbox" value="${k}"${k===kind?' checked':''}>${esc(l)}</label>`).join('')}</div><div class="bar"><button class="btn play" type="button" id="playLog">Log play</button><button class="btn ghost" type="button" id="playCancel">Cancel</button>${RW?'':'<span class="hint">The first time, Google asks you to allow logging to the Play Made Log.</span>'}</div>`;
+ box.innerHTML=`<div><b>What did you send to ${esc(a.biz)}?</b>${prior.length?` <span class="hint">· ${prior.length} play${prior.length>1?'s':''} already logged on this account</span>`:''}</div><div class="checks">${PK.map(([k,l])=>`<label><input type="checkbox" value="${k}"${(k===kind&&PKL[k])||k==='call'||k==='vm'?' checked':''}>${esc(l)}</label>`).join('')}</div><div class="hint">Today\u2019s cadence: Call + voicemail + asset email = Play Made.</div><div class="bar"><button class="btn play" type="button" id="playLog">Log play</button><button class="btn ghost" type="button" id="playCancel">Cancel</button>${RW?'':'<span class="hint">The first time, Google asks you to allow logging to the Play Made Log.</span>'}</div>`;
  box.hidden=false;$('#playCancel').onclick=()=>{box.hidden=true};$('#playLog').onclick=()=>logPlay(a)}
 async function logPlay(a){if(PLAY_BUSY)return;const ks=[...$$('#playBox input:checked')].map(i=>i.value);if(!ks.length){toast('Pick what you sent.');return}
  PLAY_BUSY=true;$('#playLog').disabled=true;
