@@ -85,6 +85,7 @@ textarea{min-height:56px;resize:vertical}
 .pnote .raw{white-space:pre-wrap;color:var(--ink);font-size:12.5px;max-height:220px;overflow:auto;border-left:3px solid var(--line);padding-left:10px}
 .pnote .acts{display:flex;flex-wrap:wrap;gap:8px}
 .chipbox{display:flex;flex-wrap:wrap;gap:6px}
+.ndrow{display:flex;align-items:center;gap:8px;width:100%}.ndrow input{flex:1;min-width:0;font-size:13px;padding:5px 9px}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 6px 3px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent);font-weight:600}
 .chip button{border:0;background:none;color:inherit;cursor:pointer;font-size:14px;line-height:1;padding:0 4px}
 .sugg{font-size:12px;padding:3px 10px;border-radius:99px;border:1px dashed var(--line);background:none;color:var(--ink);cursor:pointer}
@@ -159,7 +160,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-vis
   </fieldset>
   <fieldset><legend>Name-droppers</legend>
     <div class="bar" style="flex-wrap:nowrap"><input id="ndIn" placeholder="Type a restaurant, press Enter"><button type="button" class="btn ghost" id="ndAdd">Add</button></div>
-    <label for="ndNote" style="margin-top:-2px">Note for the first one (optional)<input id="ndNote" placeholder="e.g. two blocks away"></label>
+    <input type="hidden" id="ndNote">
     <div class="chipbox" id="ndChips"></div>
     <div><span class="hint" id="suggLab">Name-droppers come over from the Cold Call Hub, or type your own.</span><div class="chipbox" id="sugg" style="margin-top:6px"></div></div>
   </fieldset>
@@ -225,20 +226,21 @@ const PLAYS={
 const PORD=['corporate','discount','select','bank','revolut'];
 const CAP={dinova:'Dinova app: corporate cardholders find participating restaurants near the office.',bofa:'Bank of America deals, Food offers: local restaurants with cash back and distance.',revolut:'Revolut Shops, Food & Drink: Seated restaurants with photos, map pins and the reward.'};
 const FIELDS=['biz','contact','role','mkt','hood','cuis','gmv','locs','aov','ndNote','stage','month','play','pct','term','seller','title','email','extra'];
-let ND=[];let HUB_DIN=null;var HUB_ACCT=null;var PK_SET=new Set();const SHEET={id:'1y9Bl1FyVl7pLYcG4SfZWd2705iP6M0rO_efAzvp1uGs',client:'352874229289-tglifiln7raionffiran3a63p6verre0.apps.googleusercontent.com',scope:'https://www.googleapis.com/auth/spreadsheets.readonly',ok:false,token:null,tc:null,scripts:{},bilt:{}};
+let ND=[];var ND_NOTES={},ND_WHY={},CUR_GEO=null;let HUB_DIN=null;var HUB_ACCT=null;var PK_SET=new Set();const SHEET={id:'1y9Bl1FyVl7pLYcG4SfZWd2705iP6M0rO_efAzvp1uGs',client:'352874229289-tglifiln7raionffiran3a63p6verre0.apps.googleusercontent.com',scope:'https://www.googleapis.com/auth/spreadsheets.readonly',ok:false,token:null,tc:null,scripts:{},bilt:{}};
 const offerLine=()=>{const p=$('#pct').value,t=$('#term').value.trim()||'through the holidays';return p?`${p}% off your Dinova spend ${t}`:''};
 const ofS=(a,b='')=>offerLine()?a+offerLine()+b:'';
 const offerBox=()=>offerLine()||'Last December, Dinova spend at our restaurants ran 34% above October.';
 function syncDiscount(){const p=$('#pct').value||'25';PLAYS.discount.name=`${p}% off Dinova spend`;PLAYS.discount.hook=`${offerLine()}.`;PLAYS.discount.pitch=`We'll take ${p}% off your Dinova spend ${$('#term').value.trim()||'through the holidays'}. You only pay on meals we send.`;PLAYS.discount.ask=`Sign and lock ${offerLine()}.`}
 function fillPlays(){syncDiscount();const v=$('#play').value||'corporate';const ord=PORD.filter(p=>p!=='discount'||$('#pct').value);$('#play').innerHTML=ord.map(p=>`<option value="${p}">${esc(PLAYS[p].name)}</option>`).join('');$('#play').value=ord.includes(v)?v:'corporate'}
 // suggestions
-function renderND(){$('#ndChips').innerHTML=ND.map((n,i)=>`<span class="chip">${esc(n)}${i===0&&$('#ndNote').value.trim()?` <span style="font-weight:400">· ${esc($('#ndNote').value.trim())}</span>`:''}<button type="button" aria-label="Remove ${esc(n)}" data-rm="${i}">×</button></span>`).join('')||'<span class="hint">None yet. Two or three is ideal.</span>';
- $('#ndChips').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ND.splice(+b.dataset.rm,1);renderND();save();renderSugg()})}
+function renderND(){$('#ndChips').innerHTML=ND.map((n,i)=>`<div class="ndrow"><span class="chip">${esc(n)}<button type="button" aria-label="Remove ${esc(n)}" data-rm="${i}">×</button></span><input data-ndn="${i}" value="${esc(ND_NOTES[n]||'')}" placeholder="Note for this one, e.g. two blocks away" aria-label="Note for ${esc(n)}"></div>`).join('')||'<span class="hint">None yet. Two or three is ideal.</span>';
+ $$('#ndChips [data-ndn]').forEach(inp=>inp.oninput=()=>{const n=ND[+inp.dataset.ndn];if(n){const v=inp.value.trim();if(v)ND_NOTES[n]=v;else delete ND_NOTES[n];save()}});
+ $('#ndChips').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{delete ND_NOTES[ND[+b.dataset.rm]];ND.splice(+b.dataset.rm,1);renderND();save();renderSugg()})}
 function pool(){const m=$('#mkt').value,h=$('#hood').value.trim().toLowerCase(),cu=$('#cuis').value,biz=$('#biz').value.trim().toLowerCase();const seen=new Set(ND.map(n=>n.toLowerCase()));if(biz)seen.add(biz);const out=[];
  for(const [hd,L] of Object.entries(NDM[m]||{}))for(const r of L){const n=r[0],k=n.toLowerCase();if(seen.has(k))continue;const sameH=!!h&&!!hd&&(hd.toLowerCase()===h||hd.toLowerCase().includes(h)||h.includes(hd.toLowerCase())),sameC=!!cu&&CU[r[1]]===cu;
   out.push({n,why:sameH?'same neighborhood':sameC?'same cuisine':r[2]==='C'?'city-wide':hd,sc:(sameH?1000:0)+(sameC?300:0)+(r[2]==='C'?60:0)+r[3]})}
  (MK[m]?.top||[]).forEach(n=>{if(!seen.has(n.toLowerCase())&&!out.some(o=>o.n.toLowerCase()===n.toLowerCase()))out.push({n,why:'top in market',sc:50})});
- const u=new Map();out.sort((a,b)=>b.sc-a.sc).forEach(o=>{if(!u.has(o.n))u.set(o.n,o)});return [...u.values()]}
+ hubSugg(out,seen);const u=new Map();out.sort((a,b)=>b.sc-a.sc).forEach(o=>{if(!u.has(o.n))u.set(o.n,o)});return [...u.values()]}
 function renderSugg(){const m=$('#mkt').value;const list=pool().slice(0,12);
  $('#suggLab').textContent=SHEET.ok?(m?(list.length?`Live Seated name-droppers in ${m}, best match first. Click to add.`:`No name-droppers on file for ${m}. Type them in above.`):'Pick a market to see live Seated name-droppers there.'):'Name-droppers come over from the Cold Call Hub, or type your own.';
  $('#sugg').innerHTML=list.map(o=>`<button type="button" class="sugg" data-add="${esc(o.n)}">+ ${esc(o.n)}<small>${esc(o.why)}</small></button>`).join('');
@@ -254,22 +256,22 @@ $('#ndAdd').onclick=addND;$('#ndIn').onkeydown=e=>{if(e.key==='Enter'){e.prevent
 $('#mkt').onchange=()=>{renderMkt();renderSugg();const rv=$('#ch_revolut');if(!rv.dataset.touched)rv.checked=/Miami|New York/.test($('#mkt').value);save()};
 $('#hood').oninput=()=>{renderSugg();save()};$('#cuis').onchange=()=>{renderSugg();save()};$('#ch_revolut').onchange=e=>{e.target.dataset.touched=1;save()};
 // persistence
-function save(){const o={offerV2:1};FIELDS.forEach(k=>o[k]=$('#'+k).value);o.nd=ND;o.ch=CHANS.map(([k])=>$('#ch_'+k).checked);store.set('cb_form',JSON.stringify(o));$('#saved').textContent='Saved in this browser'}
-function load(){let raw=store.get('cb_form',null);if(!raw){raw=JSON.stringify({biz:'',contact:'',role:'',mkt:'',hood:'',cuis:'',gmv:'',locs:'1',aov:'',ndNote:'',stage:'cold',month:'',play:'corporate',seller:'',title:'',email:'',extra:'',nd:[],ch:[true,true,false,true]})}try{const o=JSON.parse(raw);if(/nov 6/i.test(o.dl||''))o.dl='';if(o.dl){o.term=(o.term||'through the holidays')+', '+o.dl;o.dl=''}if(!o.offerV2){o.pct='';o.term='through the holidays';if(o.play==='discount')o.play='corporate'}if(o.mkt==null||o.mkt===''){const c=(o.city||'').split(',')[0].trim();if(MK[c])o.mkt=c}if(o.play==='corporate'||!o.play)o.play='corporate';FIELDS.forEach(k=>{if(o[k]!=null&&$('#'+k))$('#'+k).value=o[k]});ND=o.nd||[];if(o.ch)CHANS.forEach(([k],i)=>$('#ch_'+k).checked=!!o.ch[i])}catch(e){}}
+function save(){const o={offerV2:1};FIELDS.forEach(k=>o[k]=$('#'+k).value);o.nd=ND;o.ndn=ND_NOTES;o.ch=CHANS.map(([k])=>$('#ch_'+k).checked);store.set('cb_form',JSON.stringify(o));$('#saved').textContent='Saved in this browser'}
+function load(){let raw=store.get('cb_form',null);if(!raw){raw=JSON.stringify({biz:'',contact:'',role:'',mkt:'',hood:'',cuis:'',gmv:'',locs:'1',aov:'',ndNote:'',stage:'cold',month:'',play:'corporate',seller:'',title:'',email:'',extra:'',nd:[],ch:[true,true,false,true]})}try{const o=JSON.parse(raw);if(/nov 6/i.test(o.dl||''))o.dl='';if(o.dl){o.term=(o.term||'through the holidays')+', '+o.dl;o.dl=''}if(!o.offerV2){o.pct='';o.term='through the holidays';if(o.play==='discount')o.play='corporate'}if(o.mkt==null||o.mkt===''){const c=(o.city||'').split(',')[0].trim();if(MK[c])o.mkt=c}if(o.play==='corporate'||!o.play)o.play='corporate';FIELDS.forEach(k=>{if(o[k]!=null&&$('#'+k))$('#'+k).value=o[k]});ND=o.nd||[];ND_NOTES=o.ndn||{};if(o.ndNote&&ND[0]&&!ND_NOTES[ND[0]])ND_NOTES[ND[0]]=o.ndNote;if(o.ch)CHANS.forEach(([k],i)=>$('#ch_'+k).checked=!!o.ch[i])}catch(e){}}
 fillPlays();load();if($('#stage').selectedIndex<0)$('#stage').value='dark';fillPlays();renderMkt();renderND();renderSugg();
 $('#f').addEventListener('input',e=>{if(['pct','term'].includes(e.target.id))fillPlays();if(e.target.id==='ndNote')renderND();save()});
 $('#f').addEventListener('change',e=>{if(e.target.id==='pct')fillPlays();save()});
-$('#clear').onclick=()=>{HUB_DIN=null;HUB_ACCT=null;$('#playBox').hidden=true;$('#hubBar').hidden=true;['biz','contact','role','hood','gmv','aov','ndNote','month','extra'].forEach(k=>$('#'+k).value='');$('#locs').value='1';ND=[];renderND();renderSugg();save();$('#cuis').value='';$('#biz').focus()};
+$('#clear').onclick=()=>{HUB_DIN=null;HUB_ACCT=null;$('#playBox').hidden=true;$('#hubBar').hidden=true;['biz','contact','role','hood','gmv','aov','ndNote','month','extra'].forEach(k=>$('#'+k).value='');$('#locs').value='1';ND=[];ND_NOTES={};CUR_GEO=null;renderND();renderSugg();save();$('#cuis').value='';$('#biz').focus()};
 // context
 const up=v=>v>=100000?'$'+Math.floor(v/1000).toLocaleString('en-US')+'K+':v>=1000?'$'+(Math.floor(v/100)/10).toFixed(1).replace(/\.0$/,'')+'K':v?'$'+Math.round(v):'';
 const upA=v=>v>=1000?'$'+Math.round(v*12/1000).toLocaleString('en-US')+'K':'';
 function ctx(){const g=+String($('#gmv').value).replace(/[^\d.]/g,'')||0;const locs=Math.max(1,+$('#locs').value||1);const chans=CHANS.filter(([k])=>$('#ch_'+k).checked).map(([k])=>k);
  const auto=!ND.length?pool().slice(0,3).map(o=>o.n):[];const mk=MK[$('#mkt').value];
- return {biz:$('#biz').value.trim()||'[Business]',contact:$('#contact').value.trim(),role:$('#role').value.trim(),city:$('#hood').value.trim()||$('#mkt').value,mkt:$('#mkt').value,hood:$('#hood').value.trim(),cuis:$('#cuis').value,mk,dinOne:(HUB_DIN&&HUB_DIN.mkt===$('#mkt').value&&HUB_DIN.one)||mk?.one||'',auto:auto.length>0,g,locs,aov:+String($('#aov').value).replace(/[^\d.]/g,'')||0,nd:ND.length?ND.slice():auto,ndNote:ND.length?$('#ndNote').value.trim():'',stage:$('#stage').value,month:$('#month').value.trim(),play:$('#play').value,P:PLAYS[$('#play').value],chans,seller:$('#seller').value.trim()||'[Your name]',title:$('#title').value.trim(),email:$('#email').value.trim(),extra:$('#extra').value.trim(),corp:(HUB_DIN&&HUB_DIN.mkt===$('#mkt').value&&HUB_DIN.co.length)?HUB_DIN.co:(mk?.co||[])}}
+ return {biz:$('#biz').value.trim()||'[Business]',contact:$('#contact').value.trim(),role:$('#role').value.trim(),city:$('#hood').value.trim()||$('#mkt').value,mkt:$('#mkt').value,hood:$('#hood').value.trim(),cuis:$('#cuis').value,mk,dinOne:(HUB_DIN&&HUB_DIN.mkt===$('#mkt').value&&HUB_DIN.one)||mk?.one||'',auto:auto.length>0,g,locs,aov:+String($('#aov').value).replace(/[^\d.]/g,'')||0,nd:ND.length?ND.slice():auto,ndNote:'',ndNotes:ND.length?Object.assign({},ND_NOTES):{},stage:$('#stage').value,month:$('#month').value.trim(),play:$('#play').value,P:PLAYS[$('#play').value],chans,seller:$('#seller').value.trim()||'[Your name]',title:$('#title').value.trim(),email:$('#email').value.trim(),extra:$('#extra').value.trim(),corp:(HUB_DIN&&HUB_DIN.mkt===$('#mkt').value&&HUB_DIN.co.length)?HUB_DIN.co:(mk?.co||[])}}
 const U=x=>up(x.g),UL=x=>x.g?`${up(x.g)} a month in added sales${x.locs>1?` across your ${x.locs} locations`:''}`:'';
 const place=x=>x.hood||x.mkt||'your area';
-const ndFirst=x=>x.nd[0]?`${x.nd[0]}${x.ndNote?` (${x.ndNote})`:''}`:'';
-const proofL=x=>x.nd.length?`We're already sending diners to ${lst([ndFirst(x),...x.nd.slice(1,3)])}.`:'';
+const ndl=(x,n)=>{const t=(x.ndNotes||{})[n];return t?`${n} (${t})`:n};const ndFirst=x=>x.nd[0]?ndl(x,x.nd[0]):'';
+const proofL=x=>x.nd.length?`We're already sending diners to ${lst(x.nd.slice(0,3).map(n=>ndl(x,n)))}.`:'';
 const coL=x=>lst([x.dinOne,...x.corp.filter(c=>c!==x.dinOne)].filter(Boolean).slice(0,3))||'large companies near you';
 const sig=x=>`${x.seller}${x.title?'\n'+x.title+', Seated':'\nSeated'}${x.email?'\n'+x.email:''}`;
 const OPEN={cold:x=>'',unsched:x=>`We'd been trying to find a time to show you how Seated works${x.month?` back in ${x.month}`:''} and never locked one in.`,upcoming:x=>`Looking forward to our time together. A quick preview so you get the most out of it.`,noshow:x=>`You'd booked a time with our team${x.month?` in ${x.month}`:''} and we never connected. That's on us.`,dark:x=>`Picking back up from our conversation${x.month?` in ${x.month}`:''}.`,open:x=>`Thanks again for the time on our call. I wanted to get you an answer this week.`,pricing:x=>`When we spoke${x.month?` in ${x.month}`:''}, price was the sticking point. We've changed that.`,owner:x=>`I know the owner wasn't sold last time, so here's a smaller first step.`,timing:x=>`When we spoke${x.month?` in ${x.month}`:''} the timing didn't line up. Holiday-party season changes that.`};
@@ -338,7 +340,7 @@ function facts(x){const st={cold:'We have never spoken to them.',unsched:`They s
  return `ACCOUNT: ${x.biz}${x.locs>1?` (${x.locs} locations)`:''}${x.city?', '+x.city:''}. Contact: ${x.contact||'unknown'}${x.role?', '+x.role:''}.
 HISTORY: ${st}
 ESTIMATED UPSIDE (Seated's estimate of monthly GMV, diner spend at the restaurant, that Seated would send; say it rounded exactly as written, as "we estimate"): ${x.g?UL(x)+(x.g>=1000?`, about ${upA(x.g)} a year`:''):'none; do not invent one'}.${x.aov?` Average check about $${x.aov}.`:''}
-NAME-DROPS (restaurants we already send diners to; never give their numbers): ${x.nd.length?x.nd.map((n,i)=>i===0&&x.ndNote?`${n} (${x.ndNote})`:n).join(', '):'none; do not invent any'}.
+NAME-DROPS (restaurants we already send diners to; never give their numbers): ${x.nd.length?x.nd.map(n=>ndl(x,n)).join(', '):'none; do not invent any'}.
 MARKET: ${x.mkt||'unknown'}${x.hood?', '+x.hood:''}${x.cuis?'. Cuisine: '+x.cuis:''}${x.mk?.mem?`. Seated has ${x.mk.mem} members in this market`:''}.
 CHANNELS TO MENTION: ${chanShort(x)||'none'}. ${x.chans.includes('dinova')?`Dinova clients in the market (name up to three, ${x.dinOne||'the first'} first): ${x.corp.join(', ')||'none listed; say "large companies near you"'}.`:''}
 LEAD PLAY: ${x.P.name}. ${x.P.hook} ${x.P.pitch}
@@ -374,7 +376,7 @@ function onepager(x){const W=816,H=1056,M=56;let y=0;let s=`<svg xmlns="http://w
  const cl=chanLines(x).slice(0,3);if(cl.length){s+=kick("Who you'll reach",M,y);y+=12;const n=cl.length,gap=14,cw=(W-2*M-gap*(n-1))/n;const titles=x.chans.slice(0,3).map(c=>({dinova:'Holiday corporate diners',bofa:'Bank of America cardholders',revolut:'Revolut members',app:'Seated app members'}[c]));
   const maxc=Math.floor(cw/7.7);const BODY={dinova:`600+ companies, including ${coL(x)}, steer teams to Dinova restaurants. Last December, spend ran 34% above October on holiday parties.`,bofa:'Nationwide, through our partner Triple. They see local restaurant offers inside their banking app.',revolut:'They see restaurants in the Revolut app\u2019s Food & Drink tab, with photos and a map pin.',app:'Members earn rewards for dining out and look for places to try.'};const bodies=x.chans.slice(0,3).map(c=>BODY[c]);const ch=Math.max(...cl.map((l,i)=>nLines(titles[i],maxc-4)*21+nLines(bodies[i]||l,maxc)*19))+34;
   cl.forEach((l,i)=>{const X=M+i*(cw+gap);s+=`<rect x="${X}" y="${y}" width="${cw}" height="${ch}" rx="10" fill="${VC.sand}"/>`+lines(titles[i],X+16,y+28,maxc-4,16,VC.ink,21,{w:700})+lines(bodies[i]||l,X+16,y+28+nLines(titles[i],maxc-4)*21+4,maxc,13.5,'#4A443C',19)});y+=ch+30}
- if(x.nd.length){s+=kick(x.mkt?`Already live with Seated in ${x.mkt}`:'Already live with Seated',M,y);y+=12;const c=chips(x.nd.map((n,i)=>i===0&&x.ndNote?`${n} · ${x.ndNote}`:n),M,y,W-2*M);s+=c.svg;y+=c.h+26}
+ if(x.nd.length){s+=kick(x.mkt?`Already live with Seated in ${x.mkt}`:'Already live with Seated',M,y);y+=12;const c=chips(x.nd.map(n=>(x.ndNotes||{})[n]?`${n} · ${x.ndNotes[n]}`:n),M,y,W-2*M);s+=c.svg;y+=c.h+26}
  s+=kick('How it works',M,y);y+=10;
  const rows=[...(offerLine()?[[`${$('#pct').value}% off Dinova`,'Off your Dinova spend '+offerLine().replace(/^\d+% off your Dinova spend /,'')+'.']]:[['Holiday parties','Booking now through Dinova. Get live before December fills up.']]),['No contract, no setup fee','Card-linked. Nothing changes at the host stand.'],['Pay on results','You only pay on meals we send.']];
  rows.forEach(([a,b])=>{s+=`<line x1="${M}" x2="${W-M}" y1="${y}" y2="${y}" stroke="${VC.line}"/>`;s+=`<text x="${M}" y="${y+26}" fill="${VC.ink}" font-size="15" font-weight="700" font-family='${SANS}'>${esc(a)}</text>`+lines(b,M+200,y+26,62,15,VC.ink,20);y+=16+nLines(b,62)*20+8});
@@ -410,7 +412,7 @@ function researchPage(x){const W=816,H=1056,M=56;let y;
  rHow(x).forEach(([a,b])=>{s+=`<line x1="${M}" x2="${W-M}" y1="${y}" y2="${y}" stroke="${VC.line}"/><text x="${M}" y="${y+26}" fill="${VC.ink}" font-size="15" font-weight="700" font-family='${SANS}'>${esc(a)}</text>`+lines(b,M+180,y+26,74,15,VC.ink,20);y+=16+nLines(b,74)*20+6});
  y+=20;
  const est=x.g?`For ${x.biz}, we estimate about ${up(x.g).replace('+','')} a month in new diner spend${x.locs>1?` across ${x.locs} locations`:''}.`:'';
- if(x.nd.length){s+=kick(x.mkt?`Already live with Seated in ${x.mkt}`:'Already live with Seated',M,y);y+=12;const c=chips(x.nd.slice(0,4),M,y,W-2*M,1);s+=c.svg;y+=c.h+14}
+ if(x.nd.length){s+=kick(x.mkt?`Already live with Seated in ${x.mkt}`:'Already live with Seated',M,y);y+=12;const c=chips(x.nd.slice(0,4).map(n=>(x.ndNotes||{})[n]?`${n} · ${x.ndNotes[n]}`:n),M,y,W-2*M,1);s+=c.svg;y+=c.h+14}
  if(est){s+=lines(est,M,y+12,90,14.5,VC.ink,20,{w:700});y+=12+nLines(est,90)*20}
  const src='*Olo, quoted in Nation’s Restaurant News & Restaurant Business, “Loyalty & the Customer Experience” (Oct 2026). Other figures: the same report’s survey of nearly 325 restaurant operators, Aug 2026.';
  s+=lines(src,M,y+20,118,10.5,VC.sub,14);y+=20+nLines(src,118)*14;
@@ -498,7 +500,7 @@ async function loadSheet(){if(!SHEET.token){sheetMsg('Use your Seated Google acc
   if(mk.length){const H=cmap(mk[0]);mk.slice(1).forEach(r=>{const m=String(r[H['Market']]||'').trim();if(!m)return;MK[m]={y:String(r[H['Launched']]||'').trim(),avg:num(r[H['Avg Revenue / Restaurant']]),mem:String(r[H['Members']]||'').trim(),vol:String(r[H['Monthly Volume']]||'').trim(),top:splitTop(r[H['Top City Namedroppers']]).map(x=>x.replace(/\s*\(.*\)\s*$/,'').trim()).filter(Boolean),one:dm[m]?.one||'',co:dm[m]?.co||[]}})}
   Object.entries(dm).forEach(([m,v])=>{if(!MK[m])MK[m]={y:'',avg:0,mem:'',vol:'',top:[],one:v.one,co:v.co}});
   Object.keys(NDM).forEach(k=>delete NDM[k]);
-  if(par.length){const H=cmap(par[0]);const T={Neighborhood:'N',City:'C',National:'C'};par.slice(1).forEach(r=>{const g=n=>String(r[H[n]]??'').trim();const tier=T[g('NameDropper')];if(!tier||!/live/i.test(g('Account Status')))return;
+  if(par.length){const H0=cmap(par[0]),gg=(r,n)=>{const i=H0[n];return i==null?'':String(r[i]??'').trim()};try{hubBuild(par.slice(1).map(r=>{const pl=num(gg(r,'Google Price Level'));const cu=gg(r,'Primary Cuisine');return [gg(r,'Account Name'),gg(r,'Full Account ID'),gg(r,'Latitude')===''?null:num(gg(r,'Latitude')),gg(r,'Longitude')===''?null:num(gg(r,'Longitude')),gg(r,'Billing Zip/Postal Code'),gg(r,'Seated Market'),/^[0-9.]*$/.test(cu)?'':cu,gg(r,'Business Type'),gg(r,'Restaurant Type'),gg(r,'Google Price Level')!==''&&pl>=0&&pl<=4?Math.round(pl):null,num(gg(r,'# Google User Ratings')),num(gg(r,'In Infatuation?'))===1?1:0,num(gg(r,'In Michelin Guide?'))===1?1:0,num(gg(r,'GMV (Last 30)')),gg(r,'NameDropper'),gg(r,'Neighborhood')]}).filter(a=>a[0]&&!/closed|churn|paused/i.test('')))}catch(e){}const H=cmap(par[0]);const T={Neighborhood:'N',City:'C',National:'C'};par.slice(1).forEach(r=>{const g=n=>String(r[H[n]]??'').trim();const tier=T[g('NameDropper')];if(!tier||!/live/i.test(g('Account Status')))return;
    const m=g('Seated Market'),hd=g('Neighborhood')||m;if(!m)return;let ci=CU.indexOf(g('Primary Cuisine'));if(ci<0&&g('Primary Cuisine')){CU.push(g('Primary Cuisine'));ci=CU.length-1}
    ((NDM[m]=NDM[m]||{})[hd]=NDM[m][hd]||[]).push([g('Account Name'),ci,tier,Math.round(num(g('GMV (Last 30)'))/1000)])})}
   SHEET.scripts={};scr.forEach(r=>{if(r[0])SHEET.scripts[String(r[0]).trim()]=String(r[1]??'')});
@@ -543,6 +545,34 @@ ${S.map(([k,h,stat,say],i)=>`${h}\n${i===0?'Best fit for this account. ':''}${st
 HOW TO USE IT
 Use one stat per call, the one that matches what they just told you. Say "a national survey of restaurant operators this fall" rather than reading out the source.`}
 
+// Name-dropper picks, same method as the Cold Call Hub: nearest look-alike + best same-cuisine name-dropper, then nearest
+var HUBP=null;
+function hubBuild(list){const by={};list.forEach(a=>{if(a[2]==null||a[3]==null)return;const p={name:a[0],id:a[1],lat:+a[2],lon:+a[3],zip:a[4]||'',market:a[5]||'',cuisine:a[6]||'',btype:a[7]||'',rtype:a[8]||'',price:a[9]==null||a[9]===''?null:+a[9],reviews:+a[10]||0,infat:+a[11]||0,mich:+a[12]||0,gmv:+a[13]||0,tier:a[14]||'',hood:a[15]||''};(by[p.market]=by[p.market]||[]).push(p)});
+ Object.values(by).forEach(pool=>{const rk=k=>{const u=[...new Set(pool.map(p=>p[k]))].sort((a,b)=>a-b),ix={};u.forEach((v,j)=>ix[v]=u.length>1?j/(u.length-1):0);return ix};const gr=rk('gmv'),rr=rk('reviews');pool.forEach(p=>{p.brag=.45*gr[p.gmv]+.30*rr[p.reviews]+.15*p.mich+.07*p.infat+.03*(({National:1,City:.6,Neighborhood:.3})[p.tier]||0)})});HUBP=by}
+const h_mi=(a,b)=>{const R=3958.8,l1=a.lat*Math.PI/180,l2=b.lat*Math.PI/180,dl=l2-l1,dn=(b.lon-a.lon)*Math.PI/180,h=Math.sin(dl/2)**2+Math.cos(l1)*Math.cos(l2)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))};
+const H_CF={pizza:'italian',italian:'italian',trattoria:'italian',sushi:'japanese',japanese:'japanese',ramen:'japanese',izakaya:'japanese',mexican:'mexican',taqueria:'mexican',korean:'korean',mediterranean:'mediterranean',greek:'mediterranean',seafood:'seafood',american:'american',gastropub:'american',bar:'bar','cocktail lounge':'bar',bars:'bar',steakhouse:'steak',french:'french',thai:'thai',chinese:'chinese',indian:'indian'};
+const h_cf=c=>{c=String(c||'').toLowerCase();return H_CF[c]||c};
+const h_look=(a,p)=>{let s=0;if(a.cuisine&&p.cuisine){if(a.cuisine.toLowerCase()===p.cuisine.toLowerCase())s+=.5;else if(h_cf(a.cuisine)===h_cf(p.cuisine))s+=.35}if(a.btype&&p.btype&&a.btype.toLowerCase()===p.btype.toLowerCase())s+=.15;if(a.rtype&&p.rtype&&a.rtype.toLowerCase()===p.rtype.toLowerCase())s+=.15;if(a.price!=null&&p.price!=null){const d=Math.abs(a.price-p.price);s+=d===0?.2:d===1?.1:0}return s};
+const h_fc=x=>(x.rtype||'').toLowerCase()==='fast casual',h_tr=t=>t==='National'?2:t==='City'?1:0,h_nd=p=>p.tier==='Neighborhood'||p.tier==='City'||p.tier==='National';
+function h_boro(x){if(x.market!=='New York City')return '';const z=parseInt(String(x.zip||'').replace(/[^0-9]/g,'').slice(0,5),10);if(!z)return '';if(z>=10001&&z<=10282)return 'M';if(z>=10301&&z<=10314)return 'S';if(z>=10451&&z<=10475)return 'X';if(z>=11201&&z<=11256)return 'B';if((z>=11004&&z<=11109)||(z>=11351&&z<=11697))return 'Q';const f=Math.floor(z/100);return [100,101,102].includes(f)?'M':f===103?'S':f===104?'X':f===112?'B':[110,111,113,114,115,116].includes(f)?'Q':''}
+function hubND(a){const out={best:[],nearest:[],lookalike:[],topcuisine:[]};if(!HUBP||a.lat==null)return out;const fc=h_fc(a);
+ const pool=(HUBP[a.market]||[]).filter(p=>p.id!==a.id&&p.name.toLowerCase()!==String(a.name||'').toLowerCase()&&(fc||!h_fc(p)));if(!pool.length)return out;
+ pool.forEach(p=>{p._d=h_mi(a,p);p._l=h_look(a,p);p._why=null});const ab=h_boro(a),same=p=>!ab||h_boro(p)===ab;
+ let local=pool.filter(same);if(!local.length)local=pool;out.nearest=local.slice().sort((x,y)=>x._d-y._d).slice(0,5);
+ out.lookalike=pool.slice().sort((x,y)=>(y._l-x._l)||(x._d-y._d)).slice(0,5);
+ const topcity=pool.filter(p=>p.tier==='City'||p.tier==='National').sort((x,y)=>y.brag-x.brag).slice(0,5);const fa=h_cf(a.cuisine);
+ out.topcuisine=pool.filter(p=>h_nd(p)&&a.cuisine&&(p.cuisine.toLowerCase()===a.cuisine.toLowerCase()||h_cf(p.cuisine)===fa)).sort((x,y)=>(h_tr(y.tier)-h_tr(x.tier))||(y.brag-x.brag)).slice(0,5);
+ const nd=pool.filter(h_nd);let ndl=nd.filter(same);if(!ndl.length)ndl=nd;const la=ndl.filter(p=>p._l>=.35);
+ const lp=la.length?la.reduce((m,p)=>p._d<m._d?p:m):(ndl.length?ndl.slice().sort((x,y)=>(y._l-x._l)||(x._d-y._d))[0]:null);
+ const tcu=ab?out.topcuisine.filter(same)[0]:out.topcuisine[0],tci=ab?topcity.filter(same)[0]:topcity[0],cb=tcu||tci||null;
+ if(lp){lp._why='closest look-alike';out.best.push(lp)}if(cb&&!out.best.some(x=>x.id===cb.id)){cb._why=cb===tcu?`top ${a.cuisine} name-dropper`:'top name-dropper in the city';out.best.push(cb)}
+ for(const c of ndl.slice().sort((x,y)=>x._d-y._d)){if(out.best.length>=2)break;if(!out.best.some(x=>x.id===c.id)){c._why='nearest name-dropper';out.best.push(c)}}
+ return out}
+const h_dist=d=>d<.25?'a few blocks away':d<1.6?`${d.toFixed(1)} miles away`:'';
+function hubPicks(a){const r=hubND(a),seen=new Set(),pk=[];for(const p of [...r.best,...r.nearest]){if(pk.length>=3)break;const k=p.name.toLowerCase();if(seen.has(k))continue;seen.add(k);pk.push({name:p.name,why:p._why||'nearest partner',d:p._d})}return pk}
+function hubSugg(out,seen){if(!CUR_GEO||!HUBP)return;const r=hubND(CUR_GEO);const add=(p,why,sc)=>{const k=p.name.toLowerCase();if(seen.has(k))return;out.push({n:p.name,why,sc})};
+ r.best.forEach((p,i)=>add(p,p._why||'best match',9000-i));r.nearest.forEach((p,i)=>add(p,`${p._d.toFixed(1)} mi away`,8000-i));r.lookalike.forEach((p,i)=>add(p,`look-alike · ${p._d.toFixed(1)} mi`,7000-i));r.topcuisine.forEach((p,i)=>add(p,`top ${CUR_GEO.cuisine||'cuisine'} pick`,6500-i))}
+
 // Push to the Dinova deadline: banner, today's targets progress, voicemail scripts
 const PUSH_END='2026-11-21',TARGET_ST=['Order Form Sent','Follow-up Missed','Following Up','On Hold - Interested','Hold','Missed (Actively Rescheduling)'];
 const isTarget=r=>!r.lost&&(r.stale||TARGET_ST.includes(r.stage));
@@ -559,7 +589,7 @@ function voicemail(x){const r=(typeof SF_SEL!=='undefined'&&SF_SEL)?SF_ROWS.find
  return `Voicemail: ${missed?'missed meeting':'follow-up'} (${x.biz})\n\nHi ${who}, this is ${me} from Seated. Hope all is well!\n\n${body}\n\nLooking forward to connecting!\n\nCADENCE\nCall + voicemail + asset email = Play Made. ${missed?'Send the email right after the voicemail, then log it with Play Made!':'Send the email you mentioned right after you hang up, then log it with Play Made!'}`}
 setTimeout(renderPush,0);
 // Talking points (rep-facing): the Dinova holiday urgency play from the team meeting
-function talkingPoints(x){const co=lst(x.corp.slice(0,3))||'big local employers',when=x.month?` in ${x.month}`:'',est=x.g?`we estimate ${UL(x)}`:'',nd2=x.nd.length?lst(x.nd.slice(0,2)):'';
+function talkingPoints(x){const co=lst(x.corp.slice(0,3))||'big local employers',when=x.month?` in ${x.month}`:'',est=x.g?`we estimate ${UL(x)}`:'',nd2=x.nd.length?lst(x.nd.slice(0,2).map(n=>ndl(x,n))):'';
  const off=offerLine()||'25% off their Dinova rate for November and December';
  const proof=[est&&`For ${x.biz}, ${est}.`,nd2&&`We already send diners to ${nd2}.`].filter(Boolean).join(' ');
  const open={
@@ -630,7 +660,7 @@ function sfErr(e){const c=e?.code;
  if(c==='cancelled')return;
  sfMsg('Could not reach Salesforce just now.',true,true)}
 var SNAP=null,SNAP_ROWS=[],asOfTxt='';
-function initSnap(d){SNAP=d;SNAP_ROWS=SNAP.rows.map(r=>({Id:r[0],AccountId:r[1],OwnerId:r[2],StageName:r[3],CreatedDate:r[4],CloseDate:r[5],LastActivityDate:r[6]||null,Held__c:!!r[7],Date_Held__c:r[8]||null,Times_Rescheduled__c:r[9],Loss_Reason__c:r[10]||null,Account:{Name:r[11],Seated_Market__c:r[12]||null,Neighborhood__c:r[13]||null,Primary_Cuisine__c:r[14]||null,Monthly_Revenue_Prediction__c:r[15]||null,Group_Locations__c:r[16]||0},OpportunityContactRoles:{records:[{Contact:{FirstName:r[17]||'',Title:r[18]||''}}]},LastCall:r[19]||null,Scheduled_FOR__c:r[20]||null,Rescheduled_FOR__c:r[21]||null}));
+function initSnap(d){SNAP=d;SNAP_ROWS=SNAP.rows.map(r=>({Id:r[0],AccountId:r[1],OwnerId:r[2],StageName:r[3],CreatedDate:r[4],CloseDate:r[5],LastActivityDate:r[6]||null,Held__c:!!r[7],Date_Held__c:r[8]||null,Times_Rescheduled__c:r[9],Loss_Reason__c:r[10]||null,Account:{Name:r[11],Seated_Market__c:r[12]||null,Neighborhood__c:r[13]||null,Primary_Cuisine__c:r[14]||null,Monthly_Revenue_Prediction__c:r[15]||null,Group_Locations__c:r[16]||0},OpportunityContactRoles:{records:[{Contact:{FirstName:r[17]||'',Title:r[18]||''}}]},LastCall:r[19]||null,Scheduled_FOR__c:r[20]||null,Rescheduled_FOR__c:r[21]||null,Geo:r[22]!=null&&r[22]!==''?[+r[22],+r[23],r[24]||'',r[25]||'',r[26]||'',r[27]===''||r[27]==null?null:+r[27]]:null}));
 asOfTxt=SNAP.live?'Live from Salesforce, refreshed every 4 hours':'Salesforce snapshot from '+new Date(SNAP.asOf+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 function sfReps(){const n={};SNAP_ROWS.forEach(o=>{n[o.OwnerId]=(n[o.OwnerId]||0)+(o.StageName!=='Closed Lost'?1:0)});
  const ids=Object.keys(SNAP.owners).sort((a,b)=>SNAP.owners[a].localeCompare(SNAP.owners[b]));const last=store.get('cb_sfRep','');
@@ -706,13 +736,15 @@ function sfFill(id){const r=SF_ROWS.find(x=>x.id===id);if(!r)return;SF_SEL=id;co
  $('#biz').value=a.Name||'';$('#contact').value=c.FirstName||'';$('#role').value=String(c.Title||'').replace(/^"+|"+$/g,'');
  const m=a.Seated_Market__c||'';if(m&&![...$('#mkt').options].some(x=>x.value===m)){const op=document.createElement('option');op.value=op.textContent=m;$('#mkt').appendChild(op)}$('#mkt').value=m;HUB_DIN=null;HUB_ACCT={id:o.AccountId||'',name:a.Name||''};$('#hubBar').hidden=true;$('#hood').value=a.Neighborhood__c||'';$('#cuis').value=CU.includes(a.Primary_Cuisine__c)?a.Primary_Cuisine__c:'';
  $('#locs').value=String(a.Group_Locations__c>1?Math.round(a.Group_Locations__c):1);$('#aov').value='';$('#ndNote').value='';$('#extra').value='';ND=[];
- renderMkt();$('#gmv').value=r.gmv?String(Math.round(r.gmv)):'';
+ renderMkt();$('#gmv').value=r.gmv?String(Math.round(r.gmv)):'';ND_NOTES={};ND_WHY={};
+ CUR_GEO=o.Geo?{id:o.AccountId,name:a.Name,market:m,cuisine:a.Primary_Cuisine__c||'',lat:o.Geo[0],lon:o.Geo[1],zip:o.Geo[2],btype:o.Geo[3],rtype:o.Geo[4],price:o.Geo[5]}:null;
+ if(CUR_GEO){const pk=hubPicks(CUR_GEO);if(pk.length){ND=pk.map(p=>p.name);pk.forEach(p=>{ND_WHY[p.name]=p.why;const dd=h_dist(p.d);if(dd)ND_NOTES[p.name]=dd})}}
  let st=r.stale?'noshow':r.lost?LOSS_ST[r.loss]:OPEN_ST[r.stage];if(!st)st=r.demo==='held'?'dark':r.demo==='missed'?'noshow':'unsched';$('#stage').value=st;
  const when=r.lastCall||r.heldOn||(r.last&&r.last<=today()?r.last:null);$('#month').value=when?when.toLocaleString('en-US',{month:'long'}):'';
  const rv=$('#ch_revolut');if(rv&&!rv.dataset.touched)rv.checked=/Miami|New York/.test($('#mkt').value);
  renderND();renderSugg();fillPlays();save();renderPipe();
  const box=$('#pNote');box.hidden=false;
- box.innerHTML=`<p>Loaded <b>${esc(r.biz)}</b> (${esc(r.lost?'lost: '+(LOSS[r.loss]||r.loss||'no reason'):r.stage)}). History set to "${esc($('#stage').selectedOptions[0]?.textContent||'')}". ${r.gmv?'':'No predicted revenue on the account, so the copy leaves the number out. '}${r.stale?`<b>Demo was set for ${esc(fmtD(r.demoAt))} and isn\u2019t marked held, so it was probably missed. Confirm what happened, update the stage in Salesforce, and rebook. </b>`:''}${r.lastCall?`Last call: ${esc(fmtD(r.lastCall))} (${Math.max(0,Math.round((today()-r.lastCall)/DAY))} days ago). `:'No calls logged on this account. '}Check the form, then Build it.</p>${o.Loss_Details__c?`<p><b>Loss details:</b> ${esc(plain(o.Loss_Details__c))}</p>`:''}<div id="nBox"></div>`;
+ box.innerHTML=`<p>Loaded <b>${esc(r.biz)}</b> (${esc(r.lost?'lost: '+(LOSS[r.loss]||r.loss||'no reason'):r.stage)}). History set to "${esc($('#stage').selectedOptions[0]?.textContent||'')}". ${r.gmv?'':'No predicted revenue on the account, so the copy leaves the number out. '}${ND.length&&Object.keys(ND_WHY).length?`Name-droppers picked like the Cold Call Hub: ${esc(ND.map(n=>`${n} (${ND_WHY[n]})`).join(', '))}. Edit or add notes under Name-droppers. `:''}${r.stale?`<b>Demo was set for ${esc(fmtD(r.demoAt))} and isn\u2019t marked held, so it was probably missed. Confirm what happened, update the stage in Salesforce, and rebook. </b>`:''}${r.lastCall?`Last call: ${esc(fmtD(r.lastCall))} (${Math.max(0,Math.round((today()-r.lastCall)/DAY))} days ago). `:'No calls logged on this account. '}Check the form, then Build it.</p>${o.Loss_Details__c?`<p><b>Loss details:</b> ${esc(plain(o.Loss_Details__c))}</p>`:''}<div id="nBox"></div>`;
  renderNotes(r);
  if(matchMedia('(max-width:920px)').matches)$('#f').scrollIntoView({behavior:'smooth'});toast('Loaded '+r.biz)}
 
@@ -737,19 +769,19 @@ const isoD=v=>{v=String(v??'').trim();if(!v)return '';let m=v.match(/^(\d{4}-\d{
 async function tabSnap(){const v=await vals('Pipeline!A:Z');if(!v||v.length<2)throw new Error('notab');
  const H={};v[0].forEach((h,i)=>{const k=String(h||'').trim().toLowerCase().replace(/^opportunity\./,'');if(k&&H[k]==null)H[k]=i});
  const col=(...ns)=>{for(const n of ns){const i=H[n.toLowerCase()];if(i!=null)return i}return -1};
- const C={id:col('Id'),acct:col('AccountId'),own:col('OwnerId'),oname:col('Owner.Name'),oemail:col('Owner.Email'),stage:col('StageName'),cr:col('CreatedDate'),cl:col('CloseDate'),la:col('LastActivityDate'),held:col('Held__c'),dh:col('Date_Held__c'),tr:col('Times_Rescheduled__c'),loss:col('Loss_Reason__c'),an:col('Account.Name'),mk:col('Account.Seated_Market__c'),hd:col('Account.Neighborhood__c'),cu:col('Account.Primary_Cuisine__c'),rev:col('Account.Monthly_Revenue_Prediction__c'),gl:col('Account.Group_Locations__c'),lc:col('Last_Call_Date__c'),alc:col('Account.Last_Call_Date__c'),sf:col('Scheduled_FOR__c'),rf:col('Rescheduled_FOR__c')};
+ const C={id:col('Id'),acct:col('AccountId'),own:col('OwnerId'),oname:col('Owner.Name'),oemail:col('Owner.Email'),stage:col('StageName'),cr:col('CreatedDate'),cl:col('CloseDate'),la:col('LastActivityDate'),held:col('Held__c'),dh:col('Date_Held__c'),tr:col('Times_Rescheduled__c'),loss:col('Loss_Reason__c'),an:col('Account.Name'),mk:col('Account.Seated_Market__c'),hd:col('Account.Neighborhood__c'),cu:col('Account.Primary_Cuisine__c'),rev:col('Account.Monthly_Revenue_Prediction__c'),gl:col('Account.Group_Locations__c'),lc:col('Last_Call_Date__c'),alc:col('Account.Last_Call_Date__c'),sf:col('Scheduled_FOR__c'),rf:col('Rescheduled_FOR__c'),lat:col('Account.Latitude_del__c'),lon:col('Account.Longitude_del__c'),zip:col('Account.BillingPostalCode'),bt:col('Account.Business_Type__c'),rt:col('Account.Restaurant_Type__c'),gp:col('Account.Google_Price_Level__c')};
  if(C.id<0||C.own<0||C.stage<0)throw new Error('badtab');
  const g=(r,i)=>i<0?'':String(r[i]??'').trim();const owners={},emails={},rows=[];
  for(const r of v.slice(1)){const id=g(r,C.id);if(!/^006/.test(id))continue;const loss=g(r,C.loss);if(loss==='Duplicate Opp')continue;
   const st=g(r,C.stage);if(st==='Closed Lost'&&isoD(g(r,C.cl))<'2026-08-01')continue;if(/^Closed Won$/i.test(st))continue;
   const own=g(r,C.own);if(!own)continue;if(C.oname>=0&&g(r,C.oname))owners[own]=g(r,C.oname);if(C.oemail>=0&&g(r,C.oemail))emails[own]=g(r,C.oemail).toLowerCase();
-  rows.push([id,g(r,C.acct),own,st,isoD(g(r,C.cr)),isoD(g(r,C.cl)),isoD(g(r,C.la)),/^(true|1|yes)$/i.test(g(r,C.held))?1:0,isoD(g(r,C.dh)),Math.round(num(g(r,C.tr))),loss,g(r,C.an),g(r,C.mk),g(r,C.hd),g(r,C.cu),num(g(r,C.rev)),num(g(r,C.gl)),'','',[isoD(g(r,C.lc)),isoD(g(r,C.alc))].sort().pop()||'',g(r,C.sf),g(r,C.rf)])}
+  rows.push([id,g(r,C.acct),own,st,isoD(g(r,C.cr)),isoD(g(r,C.cl)),isoD(g(r,C.la)),/^(true|1|yes)$/i.test(g(r,C.held))?1:0,isoD(g(r,C.dh)),Math.round(num(g(r,C.tr))),loss,g(r,C.an),g(r,C.mk),g(r,C.hd),g(r,C.cu),num(g(r,C.rev)),num(g(r,C.gl)),'','',[isoD(g(r,C.lc)),isoD(g(r,C.alc))].sort().pop()||'',g(r,C.sf),g(r,C.rf),...(num(g(r,C.lat))&&num(g(r,C.lon))?[num(g(r,C.lat)),num(g(r,C.lon)),g(r,C.zip),g(r,C.bt),g(r,C.rt),g(r,C.gp)===''?'':num(g(r,C.gp))]:['','','','','',''])])}
  if(!rows.length)throw new Error('notab');Object.keys(owners).forEach(k=>owners[k]=owners[k]||k);rows.forEach(r=>{if(!owners[r[2]])owners[r[2]]='Unknown rep'});
  return {live:true,asOf:new Date().toISOString().slice(0,10),owners,emails,rows,summ:{}}}
 async function loadPipeline(){if(SNAP||PIPE_LOADING)return;PIPE_LOADING=true;sfMsg('Loading your pipeline…');
  try{let d=null,enc=null;try{d=await tabSnap()}catch(e){d=null}
   try{enc=await encSnap()}catch(e){if(!d)throw e}
-  if(d){if(enc){d.summ=enc.summ||{};const er={};(enc.rows||[]).forEach(r=>{er[r[0]]=r});d.rows.forEach(r=>{const e=er[r[0]];if(!e)return;r[17]=e[17]||'';r[18]=e[18]||'';if(!r[19])r[19]=e[19]||'';if(!r[20]&&!r[21]){r[20]=e[20]||'';r[21]=e[21]||''}});Object.entries(enc.emails||{}).forEach(([k,e])=>{if(!d.emails[k])d.emails[k]=e})}}else d=enc;
+  if(d){if(enc){d.summ=enc.summ||{};const er={};(enc.rows||[]).forEach(r=>{er[r[0]]=r});d.rows.forEach(r=>{const e=er[r[0]];if(!e)return;r[17]=e[17]||'';r[18]=e[18]||'';if(!r[19])r[19]=e[19]||'';if(!r[20]&&!r[21]){r[20]=e[20]||'';r[21]=e[21]||''}if((r[22]===''||r[22]==null)&&e[22]!=null&&e[22]!==''){for(let k=22;k<28;k++)r[k]=e[k]}});Object.entries(enc.emails||{}).forEach(([k,e])=>{if(!d.emails[k])d.emails[k]=e})}}else d=enc;
   initSnap(d);
   if(!store.get('cb_sfRep','')){let em=ME.email;if(!em){try{em=(JSON.parse(localStorage.getItem('seated_cch_auth')||'null')?.profile?.email)||''}catch(e){}}
    em=String(em||'').toLowerCase();const hit=Object.entries(SNAP.emails||{}).find(([id,e])=>e===em);if(hit)store.set('cb_sfRep',hit[0])}
@@ -822,7 +854,7 @@ function applyHub(){const m=location.hash.match(/^#hub=(.+)$/);if(!m)return;let 
  const mk=String(d.market||'').slice(0,60);if(mk&&![...$('#mkt').options].some(o=>o.value===mk)){const o=document.createElement('option');o.value=mk;o.textContent=mk;$('#mkt').appendChild(o)}$('#mkt').value=mk;$('#hood').value=String(d.hood||'').slice(0,80);
  $('#cuis').value=CU.includes(d.cuisine)?d.cuisine:'';$('#locs').value=String(Math.max(1,Math.round(+d.locs||1)));$('#aov').value='';$('#ndNote').value='';$('#extra').value='';$('#month').value='';
  renderMkt();const g=+d.gmv;$('#gmv').value=g>0?String(Math.round(g)):'';
- ND=(Array.isArray(d.nd)?d.nd:[]).map(x=>String(x).trim()).filter(Boolean).slice(0,3);
+ CUR_GEO=null;ND_NOTES={};ND=(Array.isArray(d.nd)?d.nd:[]).map(x=>String(x).trim()).filter(Boolean).slice(0,3);
  const co=(Array.isArray(d.dinova)?d.dinova:[]).map(x=>String(x).trim()).filter(Boolean);HUB_DIN=(co.length||d.dinOne)?{mkt:$('#mkt').value,one:String(d.dinOne||co[0]||''),co}:null;
  $('#stage').value='cold';
  const rv=$('#ch_revolut');if(rv&&!rv.dataset.touched)rv.checked=/Miami|New York/.test($('#mkt').value);
