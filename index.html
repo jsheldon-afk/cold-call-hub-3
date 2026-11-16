@@ -1518,6 +1518,15 @@ function render() {
                           'jsheldon@seatedapp.io': 1, 'trozencwaig@seatedapp.io': 1, 'kgarcia@seatedapp.io': 1,
                           'jsclafani@seatedapp.io': 1, 'goakes@seatedapp.io': 1 };
   var showOwnerBeta = !!OWNER_BETA_REPS[REP_EMAIL];
+  // Namedropper names actually used in the owner script → highlighted like the other scripts.
+  // Skip fallback phrases (only real restaurant names get the nd-tag).
+  var ownerNDNames = [p1n, p2n]
+      .concat(laSrc.length ? laSrc.slice(0, 2) : [])
+      .concat(bestPool.length ? [bestNdPhrase] : [])
+      .filter(Boolean);
+  ownerNDNames = ownerNDNames
+      .filter(function(n, i){ return ownerNDNames.indexOf(n) === i; })  // dedupe
+      .sort(function(a, b){ return b.length - a.length; });            // longest first (avoid partial overlaps)
   var ownerContent = scriptNotice + scriptRow('👔 Owner Script', FS('owner_script_beta',
       "It’s [Your Name] over at Seated.\n\n"
     + "We’re a restaurant concierge service, and the reason I’m calling is that we manage a nationwide diner network of over 60 million diners, with a strong presence in your area. In {city} we have {members} we’re currently connected with who are actively looking to discover new restaurants. [pause]\n\n"
@@ -1540,7 +1549,8 @@ function render() {
     + "Awesome — and last thing, to book this on my end I just need your cell phone number. What’s the best number?\n\n"
     + "Great, so you’re confirmed for [date & time] — no work on your end. Between now and then my team will build your business live so you can see what it looks like, and I’ll walk you through how diners are finding new restaurants in your area. Sound good?\n\n"
     + "Great — and one last question: is there anyone else, maybe a partner, co-owner, or marketing person, you’d want on the call?\n\n"
-    + "Okay, great — [Owner Name], you’re all set. I look forward to seeing you at [date & time]. Thanks!"));
+    + "Okay, great — [Owner Name], you’re all set. I look forward to seeing you at [date & time]. Thanks!"),
+      '', ownerNDNames);
 
   // Gatekeeper Stonewall (shown as an objection tab)
   var gkStonewall = FS('gatekeeper',
