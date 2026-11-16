@@ -1411,6 +1411,7 @@ function render() {
   var dinOne = (nd.dinova && nd.dinova.insert) || SG('din_phrase_none', "our corporate dining partners");
   var V = { name: p.name, nbhd: nbhd, p1: fb1, p2: fb2, dinOne: dinOne, restCount: restCount,
             biltSafe: biltSafe, dinPhrase: dinPhrase, accolPhrase: accolPhrase,
+            city: (p.market || p.neighborhood || 'your area'),
             group: (gInfo ? gInfo.name : ''),
             partnerFallback: (p1n || SG('partner_fallback_objection', "our partner restaurants")) };
   // S(): use the Scripts-tab value if present, else the built-in default; fills {tokens}
@@ -1468,6 +1469,36 @@ function render() {
     +     '<label class="check"><input type="checkbox"><span>Scheduled within 24 hours?</span></label>'
     +   '</div>'
     + '</div>';
+
+  // OWNER SCRIPT (BETA) — shown only to the test-group reps (by signed-in email).
+  // Override text lives in the Scripts tab under key "owner_script_beta".
+  var OWNER_BETA_REPS = { 'nburroughs@seatedapp.io': 1, 'dregan@seatedapp.io': 1, 'jprendergast@seatedapp.io': 1 };
+  var showOwnerBeta = !!OWNER_BETA_REPS[REP_EMAIL];
+  var ownerContent = scriptNotice + scriptRow('👔 Owner Script', FS('owner_script_beta',
+      "It’s [Your Name] over at Seated.\n\n"
+    + "We’re a restaurant concierge service, and the reason I’m calling is that we manage a nationwide diner network of over 60 million diners, with a strong presence in your area. In {city} we have [xxx] diners we’re currently connected with who are actively looking to discover new restaurants. [pause]\n\n"
+    + "Now, we have a bit of a problem… we have more diners looking for great places to eat than we have restaurants to recommend.\n\n"
+    + "So for example — have you heard of {p1} and {p2}, pretty close to you?\n\n"
+    + "Okay, cool — both of those we’re actively sending diners to today, and we’re looking to add more restaurants to the network. Some others we’re working with in the area include [add look-alikes] and [best name-dropper].\n\n"
+    + "I’m curious — which of those businesses most resembles yours?\n\n"
+    + "Very cool — that’s what we thought too. So we did our research and {name} has some pretty incredible reviews — people are raving about the food and service, which is pretty cool, right?\n\n"
+    + "Great — so we wanted to see if you might be interested in joining the diner network. But before I explain how, can I ask you a few quick questions to learn more about your restaurant:\n\n"
+    + "**“What does a typical week look like for you in terms of covers — are there nights you’re looking to drive more traffic?”**\n[Listen for patterns in the book. Understand where the gaps are so you can frame the pitch around real need.]\n\n"
+    + "**“Are you doing anything right now to drive covers — OpenTable promotions, social, anything like that?”**\n[Listen for gaps in their strategy. If nothing, that’s your opening. If a competitor, that’s a comparison opportunity.]\n\n"
+    + "Great — so it sounds like you’re actively trying different ways to get more folks through the door. I love that you’re doing [add contextual example]… that makes sense.\n\n"
+    + "Here’s the thing: when you’re doing [contextual example], you’re hoping to get in front of the right people at the right time — that makes sense, right?\n\n"
+    + "Perfect. So here at Seated, we already have the right people looking for restaurants at the right time, and based on everything you told me, I think your business would showcase really well in our network.\n\n"
+    + "So here’s what I’d like to do. I’d love to get you in front of a computer for just 15 minutes and walk you through how your restaurant would appear on the Seated app and our partner networks — not an example, but actually your business.\n\n"
+    + "Then I’ll show you how diners navigate that network and choose where they’re dining next. The most important thing, though, is how we drive traffic on different days of the week. Most of our restaurant partners aren’t looking to increase tables on the weekend — but of course want to increase on a Tuesday afternoon. Makes sense, right?\n\n"
+    + "So I actually have some time later today or tomorrow — what works better for you?\n\n"
+    + "**Confirmation Steps:**\n\n"
+    + "Okay, so I’m going to put you in for [day & time] — what’s the best email to send a calendar invite?\n\n"
+    + "Perfect, sending that over now… let me know when you get it.\n\n"
+    + "Perfect — our team is going to load your restaurant into our system so we can show your business live during the meeting. It takes them about 30–40 minutes to build out, so I just want to make sure that time works and you’ll have access to a computer, right?\n\n"
+    + "Awesome — and last thing, to book this on my end I just need your cell phone number. What’s the best number?\n\n"
+    + "Great, so you’re confirmed for [date & time] — no work on your end. Between now and then my team will build your business live so you can see what it looks like, and I’ll walk you through how diners are finding new restaurants in your area. Sound good?\n\n"
+    + "Great — and one last question: is there anyone else, maybe a partner, co-owner, or marketing person, you’d want on the call?\n\n"
+    + "Okay, great — [Owner Name], you’re all set. I look forward to seeing you at [date & time]. Thanks!"));
 
   // Gatekeeper Stonewall (shown as an objection tab)
   var gkStonewall = FS('gatekeeper',
@@ -1573,9 +1604,11 @@ function render() {
     + '<div class="card" style="margin-top:12px">'
     + '<div class="panel-tabs" style="flex-wrap:wrap">'
     + '<div class="panel-tab ' + (activeTopTab==='opener'?'active':'') + '" data-group="top" data-tab="opener" onclick="setPanelTab(\'top\',\'opener\')">📞📱 Opener</div>'
+    + (showOwnerBeta ? '<div class="panel-tab ' + (activeTopTab==='ownerbeta'?'active':'') + '" data-group="top" data-tab="ownerbeta" onclick="setPanelTab(\'top\',\'ownerbeta\')">👔 Owner (Beta)</div>' : '')
     + '<div class="panel-tab ' + (activeTopTab==='close'?'active':'') + '" data-group="top" data-tab="close" onclick="setPanelTab(\'top\',\'close\')">🤝 Close</div>'
     + '</div>'
     + '<div class="panel-content ' + (activeTopTab==='opener'?'active':'') + '" data-group="top" data-tab="opener">' + openerContent + '</div>'
+    + (showOwnerBeta ? '<div class="panel-content ' + (activeTopTab==='ownerbeta'?'active':'') + '" data-group="top" data-tab="ownerbeta">' + ownerContent + '</div>' : '')
     + '<div class="panel-content ' + (activeTopTab==='close'?'active':'') + '" data-group="top" data-tab="close">' + closeContent + '</div>'
     + '</div>'
     + groupCard;
