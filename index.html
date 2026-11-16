@@ -1413,16 +1413,47 @@ function render() {
   // No {p1}/{p2} generic fallback here: with zero names we skip the "have you heard of…"
   // comparison entirely rather than read a placeholder aloud.
   var cityV = (p.market || p.neighborhood || 'your area');
-  function ndFill(t) { return String(t).split('{p1}').join(p1n).split('{p2}').join(p2n).split('{city}').join(cityV); }
+
+  // Member count for this market (Markets tab "Members" column, e.g. "650K").
+  var mktStats = (MARKETS[p.market] && MARKETS[p.market].stats) || [];
+  var memberStat = mktStats.filter(function(s){ return /^members?$/i.test(String(s.label).trim()); })[0];
+  var membersV = memberStat ? String(memberStat.value).trim() : '';
+  var membersPhrase = membersV ? (membersV + ' diners') : SG('owner_members_fallback', "thousands of diners");
+
+  // Real look-alike + marquee namedropper names for the owner script (never leave bracketed).
+  var usedND = {}; if (p1n) usedND[p1n.toLowerCase()] = 1; if (p2n) usedND[p2n.toLowerCase()] = 1;
+  function cleanName(s){ return String(s || '').replace(/\s*\([^)]*\)\s*/g, '').trim(); }  // drop "(sub-brands)"
+  var laNames = (nd.lookalike || []).map(function(x){ return x && x.name; })
+      .filter(function(n){ return n && !usedND[n.toLowerCase()]; });
+  var topNames = ((MARKETS[p.market] && MARKETS[p.market].topcity) || []).map(cleanName)
+      .filter(function(n){ return n && !usedND[n.toLowerCase()]; });
+  // Look-alikes: nearby similar spots first, else the market's famous namedroppers, else a safe phrase.
+  var laSrc = laNames.length ? laNames : topNames;
+  var lookalikesPhrase = laSrc.length
+      ? laSrc.slice(0, 2).join(' and ')
+      : SG('owner_lookalikes_fallback', "other popular spots nearby");
+  // Best namedropper: a marquee market name not already used/shown as a look-alike, else fallback.
+  var laUsed = {}; laSrc.slice(0, 2).forEach(function(n){ laUsed[n.toLowerCase()] = 1; });
+  var bestPool = topNames.concat(laNames).filter(function(n){ return !laUsed[n.toLowerCase()]; });
+  var bestNdPhrase = bestPool.length
+      ? bestPool[0]
+      : SG('owner_best_fallback', "some of the most recognized names in " + cityV);
+
+  // No {p1}/{p2} generic fallback: with zero real namedroppers we skip the comparison entirely.
+  function ndFill(t) {
+    return String(t)
+      .split('{p1}').join(p1n).split('{p2}').join(p2n).split('{city}').join(cityV)
+      .split('{lookalikes}').join(lookalikesPhrase).split('{bestNd}').join(bestNdPhrase);
+  }
   var ndIntro = (best.length >= 2)
-    ? ndFill(SG('owner_nd_two', "So for example — have you heard of {p1} and {p2}, pretty close to you?\n\nOkay, cool — both of those we’re actively sending diners to today, and we’re looking to add more restaurants to the network. Some others we’re working with in the area include [add look-alikes] and [best name-dropper].\n\nI’m curious — which of those businesses most resembles yours?\n\nVery cool — that’s what we thought too."))
+    ? ndFill(SG('owner_nd_two', "So for example — have you heard of {p1} and {p2}, pretty close to you?\n\nOkay, cool — both of those we’re actively sending diners to today, and we’re looking to add more restaurants to the network. Some others we’re working with in the area include {lookalikes} and {bestNd}.\n\nI’m curious — which of those businesses most resembles yours?\n\nVery cool — that’s what we thought too."))
     : (best.length === 1)
-    ? ndFill(SG('owner_nd_one', "So for example — have you heard of {p1}, pretty close to you?\n\nOkay, cool — we’re actively sending them diners today, and we’re looking to add more restaurants to the network. A few others we’re working with in the area include [add look-alikes].\n\nI’m curious — does that sound like the kind of crowd you’d want?\n\nVery cool — that’s what we thought too."))
-    : ndFill(SG('owner_nd_none', "We’re already connected with a number of great restaurants in and around {city}, and we’re actively looking to add more to the network — which is why I wanted to reach out to you directly."));
+    ? ndFill(SG('owner_nd_one', "So for example — have you heard of {p1}, pretty close to you?\n\nOkay, cool — we’re actively sending them diners today, and we’re looking to add more restaurants to the network. A few others we’re working with in the area include {lookalikes} and {bestNd}.\n\nI’m curious — does that sound like the kind of crowd you’d want?\n\nVery cool — that’s what we thought too."))
+    : ndFill(SG('owner_nd_none', "We’re already connected with {lookalikes} and plenty of other great restaurants in and around {city}, and we’re actively looking to add more to the network — which is why I wanted to reach out to you directly."));
 
   var V = { name: p.name, nbhd: nbhd, p1: fb1, p2: fb2, dinOne: dinOne, restCount: restCount,
             biltSafe: biltSafe, dinPhrase: dinPhrase, accolPhrase: accolPhrase,
-            city: cityV, ndIntro: ndIntro,
+            city: cityV, ndIntro: ndIntro, members: membersPhrase,
             group: (gInfo ? gInfo.name : ''),
             partnerFallback: (p1n || SG('partner_fallback_objection', "our partner restaurants")) };
   // S(): use the Scripts-tab value if present, else the built-in default; fills {tokens}
@@ -1489,7 +1520,7 @@ function render() {
   var showOwnerBeta = !!OWNER_BETA_REPS[REP_EMAIL];
   var ownerContent = scriptNotice + scriptRow('👔 Owner Script', FS('owner_script_beta',
       "It’s [Your Name] over at Seated.\n\n"
-    + "We’re a restaurant concierge service, and the reason I’m calling is that we manage a nationwide diner network of over 60 million diners, with a strong presence in your area. In {city} we have [xxx] diners we’re currently connected with who are actively looking to discover new restaurants. [pause]\n\n"
+    + "We’re a restaurant concierge service, and the reason I’m calling is that we manage a nationwide diner network of over 60 million diners, with a strong presence in your area. In {city} we have {members} we’re currently connected with who are actively looking to discover new restaurants. [pause]\n\n"
     + "Now, we have a bit of a problem… we have more diners looking for great places to eat than we have restaurants to recommend.\n\n"
     + "{ndIntro}\n\n"
     + "So we did our research and {name} has some pretty incredible reviews — people are raving about the food and service, which is pretty cool, right?\n\n"
