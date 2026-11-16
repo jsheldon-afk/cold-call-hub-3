@@ -1372,9 +1372,22 @@ function render() {
   var p1n = (best[0] && best[0].name) || '';
   var p2n = (best[1] && best[1].name) || '';
 
-  // Sheet getter (Scripts tab value if present, else the built-in default) — no {token} fill
+  // Per-rep script resolver: prefer a rep-specific override row in the Scripts tab
+  // (key "<key>::<email>", e.g. "cell_opener::jsheldon@seatedapp.io"), else the
+  // shared "<key>" row. Returns null when neither has a non-empty value.
+  var REP_EMAIL = (userProfile && userProfile.email) ? String(userProfile.email).toLowerCase() : '';
+  function scriptVal(key) {
+    if (REP_EMAIL) {
+      var rk = key + '::' + REP_EMAIL;
+      if (SCRIPTS[rk] != null && String(SCRIPTS[rk]).trim() !== '') return String(SCRIPTS[rk]);
+    }
+    return (SCRIPTS[key] != null && String(SCRIPTS[key]).trim() !== '') ? String(SCRIPTS[key]) : null;
+  }
+
+  // Sheet getter (rep override → shared value → built-in default) — no {token} fill
   function SG(key, def) {
-    return (SCRIPTS[key] != null && String(SCRIPTS[key]).trim() !== '') ? String(SCRIPTS[key]) : def;
+    var v = scriptVal(key);
+    return v != null ? v : def;
   }
 
   var nbhd = p.neighborhood || 'your neighborhood';
@@ -1402,7 +1415,8 @@ function render() {
             partnerFallback: (p1n || SG('partner_fallback_objection', "our partner restaurants")) };
   // S(): use the Scripts-tab value if present, else the built-in default; fills {tokens}
   function S(key, def) {
-    var t = (SCRIPTS[key] != null && String(SCRIPTS[key]).trim() !== '') ? String(SCRIPTS[key]) : def;
+    var v = scriptVal(key);
+    var t = v != null ? v : def;
     for (var k in V) if (V.hasOwnProperty(k)) t = t.split('{' + k + '}').join(V[k] == null ? '' : V[k]);
     return t;
   }
