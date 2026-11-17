@@ -1552,6 +1552,36 @@ function render() {
     + "Okay, great — [Owner Name], you’re all set. I look forward to seeing you at [date & time]. Thanks!"),
       '', ownerNDNames);
 
+  // RESTAURANT SCRIPT (BETA) — gatekeeper / restaurant-line flow for reaching the owner.
+  // Shown to the same beta reps. Override text lives in Scripts tab key "restaurant_script_beta".
+  var restaurantContent = scriptNotice + scriptRow('🍽️ Restaurant Line (Gatekeeper)', FS('restaurant_script_beta',
+      "Hey, it’s [Rep Name] with Seated. Hoping you can point me in the right direction — I need to speak with the owner. Are they around?\n\n"
+    + "**“No — who is this?”**\n"
+    + "Oh really, okay — so it’s [Your Name] from Seated. Are you sure they aren’t there?\n\n"
+    + "**“No.”**\n"
+    + "Okay — you’re familiar with Seated, right?\n\n"
+    + "**“Who is this?”**\n"
+    + "Oh, it’s [Your Name], from Seated.\n\n"
+    + "**“What is Seated?”**\n"
+    + "A restaurant concierge that sends diners to restaurants. We have some folks we were looking to send your way, but I needed to speak with the owner and understand capacity. Are they around?\n\n"
+    + "**“No.”**\n"
+    + "Okay, so it is really important that I get in touch with them. Nationwide, we’re actually working with over 60 million diners on our network. We were considering adding {name} to that network, but I needed to speak with the owner before we did. If they aren’t there, I can give them a quick call on their cell — what’s that number?\n\n"
+    + "**“Can’t give it out.”**\n"
+    + "Look, I completely understand that the owner doesn’t want their personal number shared, and I respect that. But we’re actively trying to send more guests your way, and I don’t want them to miss out on the opportunity, so I do need to get in touch with them right away. What’s their number?\n\n"
+    + "**“Can’t give it out.”**\n"
+    + "Got it. Do you mind if I ask you a quick question — maybe you can help me out, and I’m sure the owner would appreciate it.\n\n"
+    + "How are the weekdays there? Are they as busy as the weekends?\nDo you guys do happy hour or anything like that?\n\n"
+    + "Okay, in that case, I think we could really help. I’ll leave a message with you — can you call or text the owner right away with the message?\n\n"
+    + "Do you have a pen?\n\n"
+    + "Great — so my name is [Rep Name].\nThe message is: Availability M–Th.\nMy phone number is: 929-828-4910.\n\n"
+    + "Great — can you read back my number so I know you got it?\n\n"
+    + "Perfect. And I’m sorry, what was your name?\n\n"
+    + "[Gatekeeper Name] — perfect, thank you so much for your help, I really appreciate it.\n\n"
+    + "One last question: what is the owner’s name who’ll be calling me back, so I know?\n\n"
+    + "Great, thank you! You’ve been so helpful — I’ll definitely let [Owner Name] know.\n\n"
+    + "Okay, thanks again!"),
+      '', ownerNDNames);
+
   // Gatekeeper Stonewall (shown as an objection tab)
   var gkStonewall = FS('gatekeeper',
     "[They won’t / can’t give you a name, number, or a better time]\n“I hear you — the reason I’m asking is we have guests we’re looking to send to {name} as soon as possible, so I need to get in touch with someone this week to see if this would be a good fit. Is whoever handles this kind of thing going to be in later today or tomorrow?”\n[Push a little here to figure out the best time for a call-back]\n\n[If they say they don’t do partnerships / “we don’t do that” → see the “Don’t do Partnerships” objection tab.]");
@@ -1657,10 +1687,12 @@ function render() {
     + '<div class="panel-tabs" style="flex-wrap:wrap">'
     + '<div class="panel-tab ' + (activeTopTab==='opener'?'active':'') + '" data-group="top" data-tab="opener" onclick="setPanelTab(\'top\',\'opener\')">📞📱 Opener</div>'
     + (showOwnerBeta ? '<div class="panel-tab ' + (activeTopTab==='ownerbeta'?'active':'') + '" data-group="top" data-tab="ownerbeta" onclick="setPanelTab(\'top\',\'ownerbeta\')">👔 Owner (Beta)</div>' : '')
+    + (showOwnerBeta ? '<div class="panel-tab ' + (activeTopTab==='restaurantbeta'?'active':'') + '" data-group="top" data-tab="restaurantbeta" onclick="setPanelTab(\'top\',\'restaurantbeta\')">🍽️ Restaurant (Beta)</div>' : '')
     + '<div class="panel-tab ' + (activeTopTab==='close'?'active':'') + '" data-group="top" data-tab="close" onclick="setPanelTab(\'top\',\'close\')">🤝 Close</div>'
     + '</div>'
     + '<div class="panel-content ' + (activeTopTab==='opener'?'active':'') + '" data-group="top" data-tab="opener">' + openerContent + '</div>'
     + (showOwnerBeta ? '<div class="panel-content ' + (activeTopTab==='ownerbeta'?'active':'') + '" data-group="top" data-tab="ownerbeta">' + ownerContent + '</div>' : '')
+    + (showOwnerBeta ? '<div class="panel-content ' + (activeTopTab==='restaurantbeta'?'active':'') + '" data-group="top" data-tab="restaurantbeta">' + restaurantContent + '</div>' : '')
     + '<div class="panel-content ' + (activeTopTab==='close'?'active':'') + '" data-group="top" data-tab="close">' + closeContent + '</div>'
     + '</div>'
     + groupCard;
