@@ -408,11 +408,19 @@ var searchIndex = [];
 
 // ── Session persistence (sign in once, reuse all day) ──────────
 var AUTH_STORAGE_KEY = 'seated_cch_auth';
+// The Google access token only lives ~1 hour. The *session* (who's signed in)
+// should last the whole workday, so a morning sign-in survives every refresh.
+var SESSION_TTL_MS = 14 * 3600 * 1000; // ~14h — one morning sign-in covers the day
 function saveAuth(token, expiresInSec, profile) {
   try {
     var ttl = (parseInt(expiresInSec, 10) || 3600) - 120; // 2-min safety buffer
+    var prev = loadStoredAuth();
+    // Preserve the original morning sign-in time; only start a new day-window if none is live.
+    var sessionExpiresAt = (prev && prev.sessionExpiresAt && prev.sessionExpiresAt > Date.now())
+      ? prev.sessionExpiresAt : (Date.now() + SESSION_TTL_MS);
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
-      accessToken: token, expiresAt: Date.now() + ttl * 1000, profile: profile
+      accessToken: token, expiresAt: Date.now() + ttl * 1000, profile: profile,
+      sessionExpiresAt: sessionExpiresAt
     }));
   } catch (e) {}
 }
@@ -443,21 +451,51 @@ function initAuth() {
     callback: function() {}
   });
 
-  // Resume an existing session if a non-expired token is stored from earlier
+  // Resume the day's session. As long as the morning sign-in is still inside
+  // its workday window we keep the rep signed in — minting a fresh access token
+  // silently when the 1-hour one has lapsed, with no prompt.
   var stored = loadStoredAuth();
-  if (stored && stored.accessToken && stored.expiresAt > Date.now() && stored.profile) {
-    accessToken = stored.accessToken;
+  if (stored && stored.profile && stored.sessionExpiresAt && stored.sessionExpiresAt > Date.now()) {
     userProfile = stored.profile;
-    afterAuth().catch(function() {
-      // Stored token was rejected — fall back to interactive sign-in
-      clearStoredAuth(); accessToken = null;
-      google.accounts.id.prompt();
-    });
+    if (stored.accessToken && stored.expiresAt > Date.now()) {
+      accessToken = stored.accessToken;
+      afterAuth().catch(function() { recoverSession(); });
+    } else {
+      // Session still valid for today, but the short-lived access token expired —
+      // get a new one silently instead of forcing a re-login.
+      silentToken(stored.profile.email)
+        .then(function() { return afterAuth(); })
+        .catch(function() { recoverSession(); });
+    }
     return;
   }
 
   // No valid session — auto_select will sign in silently if their Google
   // session is still alive and they previously granted; otherwise show button.
+  google.accounts.id.prompt();
+}
+
+// Mint a fresh Sheets access token without any UI (Google session must be alive).
+function silentToken(hint) {
+  return new Promise(function(resolve, reject) {
+    if (!tokenClient) return reject(new Error('token client not ready'));
+    tokenClient.callback = function(tokenResp) {
+      if (tokenResp && tokenResp.access_token) {
+        accessToken = tokenResp.access_token;
+        saveAuth(accessToken, tokenResp.expires_in, userProfile);
+        resolve(accessToken);
+      } else {
+        reject(new Error((tokenResp && tokenResp.error) || 'silent token failed'));
+      }
+    };
+    try { tokenClient.requestAccessToken({ prompt: '', hint: hint }); }
+    catch (e) { reject(e); }
+  });
+}
+
+// Silent resume failed (Google session ended / consent revoked) — show sign-in.
+function recoverSession() {
+  clearStoredAuth(); accessToken = null;
   google.accounts.id.prompt();
 }
 
